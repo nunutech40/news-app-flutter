@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:news_app/core/theme/app_theme.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:news_app/features/auth/presentation/widgets/auth_text_field.dart';
+import 'package:news_app/core/utils/validators.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -157,15 +158,7 @@ class _LoginPageState extends State<LoginPage>
                             hint: 'Enter your email',
                             prefixIcon: Icons.email_outlined,
                             keyboardType: TextInputType.emailAddress,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Email is required';
-                              }
-                              if (!value.contains('@')) {
-                                return 'Enter valid email';
-                              }
-                              return null;
-                            },
+                            validator: AppValidators.validateEmail,
                           ),
                           const SizedBox(height: 16),
 
@@ -190,15 +183,7 @@ class _LoginPageState extends State<LoginPage>
                                 });
                               },
                             ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Password is required';
-                              }
-                              if (value.length < 8) {
-                                return 'Password must be at least 8 characters';
-                              }
-                              return null;
-                            },
+                            validator: AppValidators.validatePassword,
                           ),
                           const SizedBox(height: 32),
 
