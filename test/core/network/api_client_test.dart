@@ -6,6 +6,7 @@ import 'package:news_app/core/network/api_client.dart';
 import 'package:news_app/core/bloc/global_alert/global_alert_bloc.dart';
 import 'package:news_app/core/bloc/global_alert/global_alert_event.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:news_app/core/bloc/global_alert/global_alert_state.dart';
 
 // =============================================================================
@@ -27,29 +28,24 @@ import 'package:news_app/core/bloc/global_alert/global_alert_state.dart';
 //       (seperti {'data': response}).
 // =============================================================================
 
-class FakeGlobalAlertBloc extends Bloc<GlobalAlertEvent, GlobalAlertState>
-    implements GlobalAlertBloc {
-  final List<GlobalAlertEvent> addedEvents = [];
-  FakeGlobalAlertBloc() : super(GlobalAlertInitial());
-  
-  @override
-  void add(GlobalAlertEvent event) {
-    addedEvents.add(event);
-    super.add(event);
-  }
-}
+class MockGlobalAlertBloc extends Mock implements GlobalAlertBloc {}
+class FakeShowNetworkFailure extends Fake implements ShowNetworkFailure {}
 
 void main() {
   late Dio dio;
   late DioAdapter dioAdapter;
   late ApiClient apiClient;
-  late FakeGlobalAlertBloc fakeGlobalAlertBloc;
+  late MockGlobalAlertBloc mockGlobalAlertBloc;
+
+  setUpAll(() {
+    registerFallbackValue(FakeShowNetworkFailure());
+  });
 
   setUp(() {
     dio = Dio(BaseOptions(baseUrl: 'http://test.com'));
     dioAdapter = DioAdapter(dio: dio);
-    fakeGlobalAlertBloc = FakeGlobalAlertBloc();
-    apiClient = ApiClient.withDio(dio, globalAlertBloc: fakeGlobalAlertBloc);
+    mockGlobalAlertBloc = MockGlobalAlertBloc();
+    apiClient = ApiClient.withDio(dio, globalAlertBloc: mockGlobalAlertBloc);
   });
 
   group('ApiClient.request', () {
@@ -309,22 +305,21 @@ void main() {
           ),
         );
 
-        expect(
+        await expectLater(
           () => apiClient.request('GET', path),
           throwsA(
-            isA<ServerException>()
+            isA<NetworkException>()
                 .having(
                   (e) => e.message,
                   'message',
                   'Connection timed out. Please try again.',
-                )
-                .having((e) => e.statusCode, 'statusCode', isNull),
+                ),
           ),
         );
         
-        expect(fakeGlobalAlertBloc.addedEvents, isNotEmpty);
-        expect(fakeGlobalAlertBloc.addedEvents.first, isA<ShowNetworkFailure>());
-        expect((fakeGlobalAlertBloc.addedEvents.first as ShowNetworkFailure).isTimeout, isTrue);
+        verify(() => mockGlobalAlertBloc.add(
+              any(that: isA<ShowNetworkFailure>().having((e) => e.isTimeout, 'isTimeout', true)),
+            )).called(1);
       });
 
       test('send timeout throws ServerException with timeout message', () async {
@@ -342,16 +337,20 @@ void main() {
           data: Matchers.any,
         );
 
-        expect(
+        await expectLater(
           () => apiClient.request('POST', path, data: {'file': 'big'}),
           throwsA(
-            isA<ServerException>().having(
+            isA<NetworkException>().having(
               (e) => e.message,
               'message',
               'Connection timed out. Please try again.',
             ),
           ),
         );
+
+        verify(() => mockGlobalAlertBloc.add(
+              any(that: isA<ShowNetworkFailure>().having((e) => e.isTimeout, 'isTimeout', true)),
+            )).called(1);
       });
 
       test('receive timeout throws ServerException with timeout message', () async {
@@ -368,16 +367,20 @@ void main() {
           ),
         );
 
-        expect(
+        await expectLater(
           () => apiClient.request('GET', path),
           throwsA(
-            isA<ServerException>().having(
+            isA<NetworkException>().having(
               (e) => e.message,
               'message',
               'Connection timed out. Please try again.',
             ),
           ),
         );
+
+        verify(() => mockGlobalAlertBloc.add(
+              any(that: isA<ShowNetworkFailure>().having((e) => e.isTimeout, 'isTimeout', true)),
+            )).called(1);
       });
 
       test('connection error throws ServerException with no internet message', () async {
@@ -394,10 +397,10 @@ void main() {
           ),
         );
 
-        expect(
+        await expectLater(
           () => apiClient.request('GET', path),
           throwsA(
-            isA<ServerException>().having(
+            isA<NetworkException>().having(
               (e) => e.message,
               'message',
               'No internet connection.',
@@ -405,9 +408,9 @@ void main() {
           ),
         );
 
-        expect(fakeGlobalAlertBloc.addedEvents, isNotEmpty);
-        expect(fakeGlobalAlertBloc.addedEvents.first, isA<ShowNetworkFailure>());
-        expect((fakeGlobalAlertBloc.addedEvents.first as ShowNetworkFailure).isTimeout, isFalse);
+        verify(() => mockGlobalAlertBloc.add(
+              any(that: isA<ShowNetworkFailure>().having((e) => e.isTimeout, 'isTimeout', false)),
+            )).called(1);
       });
 
       test('cancel DioException falls back to generic message', () async {
