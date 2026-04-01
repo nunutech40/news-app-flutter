@@ -9,6 +9,11 @@ import 'package:news_app/features/splash/presentation/pages/splash_page.dart';
 
 class AppRouter {
   final AuthBloc authBloc;
+
+  /// [rootNavigatorKey] adalah kunci utama yang disuntikkan ke MaterialApp.router.
+  /// Ini SANGAT krusial untuk fitur GlobalAlertBloc. Dengan kunci statis ini,
+  /// fungsi utilitas seperti `UIHelpers.showNetworkBottomSheet` bisa memunculkan
+  /// UI overlay (Alert/BottomSheet) dari mana saja tanpa butuh BuildContext spesifik halaman.
   static final GlobalKey<NavigatorState> rootNavigatorKey =
       GlobalKey<NavigatorState>();
 
@@ -18,29 +23,38 @@ class AppRouter {
     navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     debugLogDiagnostics: true,
+    // =========================================================================
+    // GLOBAL REDIRECT LOGIC
+    // =========================================================================
+    // Fungsi ini dipanggil setiap kali ada perubahan rute atau perubahan state
+    // di `refreshListenable` (yaitu Stream dari AuthBloc).
+    // Ini menggaransi user tidak akan bisa masuk halaman terlarang.
     redirect: (context, state) {
       final authStatus = authBloc.state.status;
       final isOnAuth = state.matchedLocation == '/login' ||
           state.matchedLocation == '/register';
       final isOnSplash = state.matchedLocation == '/splash';
 
-      // Still checking auth, stay on splash
+      // 1. Sedang inisialisasi aplikasi (cek token di lokal), tahan user di Splash
       if (authStatus == AuthStatus.initial && isOnSplash) {
-        return null;
+        return null; // Tetap di rute saat ini (/splash)
       }
 
-      // Not authenticated and not on auth pages
+      // 2. Tidak punya akses (Unauthenticated) & mencoba akses halaman non-Auth
+      //    > Paksa lempar ke Login Page
       if (authStatus == AuthStatus.unauthenticated && !isOnAuth) {
         return '/login';
       }
 
-      // Authenticated and on auth pages or splash
+      // 3. Sudah punya akses (Authenticated) tapi mencoba buka Login/Register/Splash
+      //    > Paksa tendang ke Dashboard Page (Tidak masuk akal user login ditawari login lagi)
       if (authStatus == AuthStatus.authenticated && (isOnAuth || isOnSplash)) {
         return '/dashboard';
       }
 
-      return null;
+      return null; // Tidak ada pelanggaran, biarkan user lewat
     },
+    // Merubah Stream (dari AuthBloc) menjadi tipe Listenable yang bisa dibaca GoRouter
     refreshListenable: GoRouterRefreshStream(authBloc.stream),
     routes: [
       GoRoute(
