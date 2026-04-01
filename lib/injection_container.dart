@@ -21,10 +21,47 @@ import 'package:news_app/features/auth/domain/usecases/register_usecase.dart';
 // Auth - Presentation
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 
+// =============================================================================
+// PANDUAN PEMILIHAN TIPE REGISTRASI DI GET_IT
+// =============================================================================
+//
+// GetIt menyediakan 3 cara utama untuk mendaftarkan dependency:
+//
+// 1. registerLazySingleton<T>(() => ...)
+//    - Objek HANYA DIBUAT SEKALI, saat pertama kali diminta (lazy).
+//    - Setelah dibuat, instance yang SAMA dipakai terus selama app hidup.
+//    - COCOK UNTUK: Service/Datasource/Repository/ApiClient yang STATELESS 
+//      (tidak menyimpan data sementara) dan MAHAL untuk dibuat ulang.
+//    - CONTOH: ApiClient (koneksi Dio), SecureStorage, SharedPreferences.
+//
+// 2. registerFactory<T>(() => ...)
+//    - Setiap kali diminta, GetIt membuat INSTANCE BARU (fresh).
+//    - Tidak ada sharing antar pemanggil.
+//    - COCOK UNTUK: BLoC/Cubit yang HARUS FRESH setiap halaman dibuka.
+//      Misalnya: FormBloc untuk halaman edit profil; setiap kali user buka 
+//      halaman edit, state-nya harus kosong/reset, bukan sisa data lama.
+//    - CONTOH: EditProfileBloc, SearchBloc, FormCubit.
+//
+// 3. registerSingleton<T>(...)
+//    - Mirip LazySingleton, tapi objek LANGSUNG DIBUAT saat `initDependencies()`
+//      dipanggil, tanpa menunggu ada yang meminta.
+//    - COCOK UNTUK: Dependency yang WAJIB SIAP sebelum app berjalan.
+//    - CONTOH: Logger, Analytics, Firebase instance.
+//
+// KAPAN PAKAI LAZYSINGLETON vs FACTORY UNTUK BLOC?
+// - LazySingleton: BLoC yang state-nya harus BERTAHAN lintas halaman.
+//   Contoh: AuthBloc (status login harus diingat dari Splash → Login → Dashboard).
+// - Factory: BLoC yang state-nya harus DIRESET setiap halaman dibuka.
+//   Contoh: SearchNewsBloc (setiap buka halaman search, hasil pencarian harus kosong).
+//
+// =============================================================================
+
 final sl = GetIt.instance;
 
 Future<void> initDependencies() async {
   // ==================== External ====================
+  // LazySingleton: Library bawaan OS yang cukup satu instance seumur app.
+  // Tidak perlu dibuat ulang karena ia hanya jembatan ke native storage.
   const secureStorage = FlutterSecureStorage();
   sl.registerLazySingleton<FlutterSecureStorage>(() => secureStorage);
 
@@ -32,6 +69,8 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<SharedPreferences>(() => sharedPreferences);
 
   // ==================== Datasources ====================
+  // LazySingleton: DataSource bersifat STATELESS (tidak menyimpan variabel lokal).
+  // Ia hanya meneruskan panggilan ke storage/API. Satu instance cukup.
   // Local first — needed by ApiClient for token injection
   sl.registerLazySingleton<AuthLocalDatasource>(
     () => AuthLocalDatasourceImpl(
@@ -46,16 +85,20 @@ Future<void> initDependencies() async {
   );
 
   // ==================== Core ====================
+  // LazySingleton: ApiClient membungkus Dio yang MAHAL untuk diinisialisasi
+  // (setup interceptor, timeout, base URL). Cukup satu instance untuk seluruh app.
   sl.registerLazySingleton<ApiClient>(
     () => ApiClient(tokenProvider: sl()),
   );
 
-  // Remote datasource uses ApiClient
+  // LazySingleton: Sama seperti LocalDatasource, ia STATELESS.
   sl.registerLazySingleton<AuthRemoteDatasource>(
     () => AuthRemoteDatasourceImpl(apiClient: sl()),
   );
 
   // ==================== Repository ====================
+  // LazySingleton: Repository STATELESS, hanya orkestrator antar datasource.
+  // Tidak ada alasan untuk membuat ulang di setiap pemanggilan.
   sl.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(
       remoteDatasource: sl(),
@@ -64,12 +107,22 @@ Future<void> initDependencies() async {
   );
 
   // ==================== Use Cases ====================
+  // LazySingleton: UseCase STATELESS, hanya meneruskan panggilan ke Repository.
+  // Sangat ringan dan tidak perlu dibuat ulang.
   sl.registerLazySingleton(() => LoginUseCase(sl()));
   sl.registerLazySingleton(() => RegisterUseCase(sl()));
   sl.registerLazySingleton(() => GetProfileUseCase(sl()));
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
 
   // ==================== BLoC ====================
+  // LazySingleton: AuthBloc SENGAJA dibuat singleton karena STATUS AUTENTIKASI
+  // harus PERSISTENT (bertahan) lintas halaman.
+  // Contoh: Setelah register sukses di RegisterPage, state `registrationSuccess`
+  // harus masih bisa dibaca oleh LoginPage untuk menampilkan SnackBar.
+  // Jika diganti Factory, state akan hilang setiap pindah halaman (BLoC baru).
+  //
+  // CATATAN: Untuk BLoC fitur lain (misal: SearchNewsBloc, EditProfileBloc),
+  // gunakan registerFactory agar state-nya selalu fresh/reset.
   sl.registerLazySingleton<AuthBloc>(
     () => AuthBloc(
       loginUseCase: sl(),
