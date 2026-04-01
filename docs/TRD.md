@@ -165,6 +165,14 @@ Presentation -> Domain <- Data
 | **google_fonts** | ^6.2.1 | Akses ke 1000+ Google Fonts tanpa bundling manual. Runtime font loading. |
 | **cupertino_icons** | ^1.0.8 | iOS-style icons untuk platform-consistent UI. |
 
+#### Testing
+
+| Library | Version | Justification |
+|---------|---------|---------------|
+| **bloc_test** | ^3.3.0 | Standar emas untuk menguji state transitions pada BLoC dengan format `build`, `act`, `expect`. |
+| **mocktail** | ^1.0.4 | Null-safety friendly mocking library (alternatif modern untuk mockito). |
+| **http_mock_adapter** | ^0.6.1 | Untuk simulasi (mocking) respons HTTP dari Dio tanpa butuh koneksi internet. |
+
 ---
 
 ## 4. Architecture Pattern
@@ -963,11 +971,15 @@ Order matters karena dependency chain:
 8. BLoC           -> Needs Use Cases + Repository
 ```
 
-### 14.2 Lifetime
+### 14.2 Registration Strategy
 
-| Component | Registration | Reason |
-|-----------|-------------|--------|
-| All | `registerLazySingleton` | Single instance, created on first access. Auth state harus consistent across app. |
+Sistem menggunakan strategi registrasi spesifik berdasarkan sifat *state* dari masing-masing komponen:
+
+| Tipe Registrasi | Kapan Dibuat | Sifat | Penggunaan | Contoh di Aplikasi |
+|-----------------|--------------|-------|------------|---------------------|
+| **LazySingleton** | Saat pertama kali diminta | *Persistent / Shared* | Service yang *stateless* atau BLoC yang statusnya wajib bertahan lintas halaman. | `ApiClient`, `AuthLocalDatasource`, `AuthRepository`, `AuthBloc`. |
+| **Factory** | Setiap kali diminta | *Fresh / Reset* | BLoC yang datanya wajib kosong otomatis tiap kali *user* membuka halaman baru. | *(Rencana)* `SearchNewsBloc`, `EditProfileBloc`. |
+| **Singleton** | Saat `initDependencies()` | *Pre-warmed* | Service yang absolut harus siap menyala sebelum UI Flutter dirender. | *(Rencana)* `FirebaseApp`, `Logger`. |
 
 ### 14.3 Dependency Graph
 
@@ -1052,16 +1064,24 @@ graph TD
   /-------------------\
 ```
 
-### 16.2 Unit Test Targets
+### 16.2 Standard Testing Paths (Skenario Wajib)
+
+Proyek ini mewajibkan **3 Jalur Pengujian (Paths)** untuk seluruh *layer* agar mencapai ketahanan setara *Enterprise*:
+
+1. **Happy Path:** Menguji aliran sukses. (Target: mengembalikan `Right(Data)` atau merender sukses).
+2. **Error Path:** Menguji aliran gagal yang *"Sudah Tertebak"*. (Target: melempar `Left(Failure)` akibat 404, 500, salah *password*, tanpa internet).
+3. **Edge Path:** Menguji aliran aneh/*blind spots*. (Target: mencegah aplikasi *crash* jika memori HP *corrupt*, format JSON server diam-diam berubah tipe, atau kehilangan koneksi di tengah rentetan operasi berantai BLoC).
+
+### 16.3 Unit Test Targets
 
 | Component | What to Test |
 |-----------|-------------|
-| **Entities** | Equality, props |
-| **Models** | `fromJson()`, `toJson()` with valid/invalid data |
-| **UseCases** | Call forwarding to repository |
-| **Repository** | Datasource orchestration, error mapping |
-| **BLoC** | Event -> State transitions |
-| **ApiClient** | Error mapping via `_handleDioError` |
+| **Local Datasource** | Proses *Write*, *Read*, dan *Edge Path* (Partial Cache / JSON null). |
+| **Remote Datasource** | Panggilan *ApiClient*, transisi respon HTTP jadi Model. |
+| **Repository** | *Exception* catching menjadi *Failure*, Fallback ke Cache Lokal saat Server offline (Edge case). |
+| **UseCases** | *Return Integrity* & *Forwarding* parameter. |
+| **BLoC** | Transisi *Event* -> *State* secara berurutan, penanganan *Chaining Event* terputus. |
+| **ApiClient** | Pemetaan *DioException* mutlak menjadi *ServerException*. |
 
 ### 16.3 Mocking Strategy
 
@@ -1103,7 +1123,15 @@ Adding a new feature (e.g., News) requires:
 
 **No existing code needs to be modified** (Open/Closed Principle).
 
-### 17.4 Future Considerations
+### 17.4 Production Readiness (main.dart)
+
+Aplikasi telah dilengkapi dengan perlindungan standar rilis produksi pada level *bootstrap* (`main.dart`):
+1. **AppBlocObserver:** Melakukan jejak (*logging*) otomatis seluruh transisi *State* BLoC (Hanya aktif di Mode Debug).
+2. **Orientation Lock:** Layar dikunci statis pada mode *Portrait Up/Down*.
+3. **Status Bar Styling:** Mewarnai *bar* atas (baterai, jam, sinyal) menjadi transparan.
+4. **Global Error Catcher:** Mencegat semua *Exception* yang gagal ditangkap `try-catch` lewat `FlutterError.onError` dan `PlatformDispatcher.instance.onError` guna mencegah layar abu-abu mengerikan (*Grey Screen of Death*).
+
+### 17.5 Future Considerations
 
 | Item | Priority | Notes |
 |------|----------|-------|
@@ -1112,8 +1140,7 @@ Adding a new feature (e.g., News) requires:
 | Biometric auth | P2 | For sensitive operations |
 | Offline mode | P2 | Cache news articles locally |
 | Push notifications | P2 | Breaking news alerts |
-| Analytics | P2 | Firebase Analytics or Mixpanel |
-| Crash reporting | P1 | Firebase Crashlytics or Sentry |
+| Crash reporting | P1 | Connect the Global Error Catcher in main.dart to Firebase Crashlytics |
 
 ---
 
