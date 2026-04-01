@@ -5,7 +5,7 @@ import 'package:news_app/core/theme/app_theme.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:news_app/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:news_app/core/utils/validators.dart';
-import 'package:news_app/core/utils/ui_helpers.dart';
+import 'package:news_app/core/mixins/network_error_mixin.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -15,7 +15,7 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, NetworkErrorMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -91,25 +91,7 @@ class _RegisterPageState extends State<RegisterPage>
             );
             context.goNamed('login');
           } else if (state.status == AuthStatus.error && state.errorMessage != null) {
-            final msg = state.errorMessage!;
-            if (msg.contains('No internet connection')) {
-              UIHelpers.showNetworkBottomSheet(context, false, _onRegister);
-            } else if (msg.contains('Connection timed out')) {
-              UIHelpers.showNetworkBottomSheet(context, true, _onRegister);
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      const Icon(Icons.error_outline, color: AppTheme.error),
-                      const SizedBox(width: 12),
-                      Expanded(child: Text(msg)),
-                    ],
-                  ),
-                  backgroundColor: AppTheme.surfaceElevated,
-                ),
-              );
-            }
+            handleNetworkError(state.errorMessage!, _onRegister);
           }
         },
         child: Container(
