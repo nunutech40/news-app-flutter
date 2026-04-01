@@ -34,6 +34,8 @@ class AuthRepositoryImpl implements AuthRepository {
         message: e.message,
         statusCode: e.statusCode,
       ));
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(message: e.message));
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));
     }
@@ -62,6 +64,8 @@ class AuthRepositoryImpl implements AuthRepository {
         message: e.message,
         statusCode: e.statusCode,
       ));
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(message: e.message));
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));
     }
@@ -94,6 +98,17 @@ class AuthRepositoryImpl implements AuthRepository {
         message: e.message,
         statusCode: e.statusCode,
       ));
+    } on NetworkException catch (e) {
+      // Try cached profile as fallback
+      final cached = await localDatasource.getCachedProfile();
+      if (cached != null) {
+        return Right(User(
+          id: cached['id'] as int,
+          name: cached['name'] as String,
+          email: cached['email'] as String,
+        ));
+      }
+      return Left(NetworkFailure(message: e.message));
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));
     }
@@ -110,6 +125,10 @@ class AuthRepositoryImpl implements AuthRepository {
       return const Right(null);
     } on ServerException catch (_) {
       // Even if server logout fails, clear everything locally
+      await localDatasource.clearAll();
+      return const Right(null);
+    } on NetworkException catch (_) {
+      // Disconnected during logout? Still clear locale
       await localDatasource.clearAll();
       return const Right(null);
     } catch (_) {

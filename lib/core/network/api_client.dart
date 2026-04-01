@@ -76,7 +76,7 @@ class ApiClient {
   }
 
   /// Convert DioException to our domain exceptions
-  ServerException _handleDioError(DioException e) {
+  Exception _handleDioError(DioException e) {
     final statusCode = e.response?.statusCode;
     String message;
 
@@ -84,11 +84,9 @@ class ApiClient {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        message = 'Connection timed out. Please try again.';
-        break;
+        return const NetworkException(message: 'Connection timed out. Please try again.');
       case DioExceptionType.connectionError:
-        message = 'No internet connection.';
-        break;
+        return const NetworkException(message: 'No internet connection.');
       case DioExceptionType.badResponse:
         final data = e.response?.data;
         if (data is Map<String, dynamic>) {
