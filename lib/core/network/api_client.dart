@@ -3,14 +3,17 @@ import 'package:news_app/core/constants/api_constants.dart';
 import 'package:news_app/core/error/exceptions.dart';
 import 'package:news_app/core/network/auth_interceptor.dart';
 import 'package:news_app/core/network/token_provider.dart';
+import 'package:news_app/core/bloc/global_alert/global_alert_bloc.dart';
+import 'package:news_app/core/bloc/global_alert/global_alert_event.dart';
 
 /// Wraps Dio and provides clean HTTP methods.
 /// All remote datasources should use this instead of raw Dio.
 class ApiClient {
   final Dio _dio;
+  final GlobalAlertBloc? globalAlertBloc;
 
   /// Production constructor — creates Dio internally with interceptors.
-  ApiClient({required TokenProvider tokenProvider})
+  ApiClient({required TokenProvider tokenProvider, this.globalAlertBloc})
       : _dio = Dio(
           BaseOptions(
             baseUrl: ApiConstants.baseUrl,
@@ -39,7 +42,7 @@ class ApiClient {
   }
 
   /// Test constructor — accepts a pre-configured Dio instance.
-  ApiClient.withDio(this._dio);
+  ApiClient.withDio(this._dio, {this.globalAlertBloc});
 
   /// Single entry point for all HTTP requests.
   ///
@@ -84,8 +87,10 @@ class ApiClient {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
+        globalAlertBloc?.add(ShowNetworkFailure(isTimeout: true));
         return const NetworkException(message: 'Connection timed out. Please try again.');
       case DioExceptionType.connectionError:
+        globalAlertBloc?.add(ShowNetworkFailure(isTimeout: false));
         return const NetworkException(message: 'No internet connection.');
       case DioExceptionType.badResponse:
         final data = e.response?.data;

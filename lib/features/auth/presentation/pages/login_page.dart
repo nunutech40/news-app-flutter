@@ -5,7 +5,6 @@ import 'package:news_app/core/theme/app_theme.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:news_app/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:news_app/core/utils/validators.dart';
-import 'package:news_app/core/mixins/network_error_mixin.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,7 +14,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage>
-    with SingleTickerProviderStateMixin, NetworkErrorMixin {
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -70,7 +69,25 @@ class _LoginPageState extends State<LoginPage>
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state.status == AuthStatus.error && state.errorMessage != null) {
-            handleNetworkError(state.errorMessage!, _onLogin);
+            final msg = state.errorMessage!;
+            // Ignore network errors, they are handled completely by GlobalAlertBloc
+            if (msg.contains('No internet connection') || msg.contains('Connection timed out')) {
+              return;
+            }
+
+            // Pesan error reguler seperti salah password dsb, gunakan SnackBar
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: AppTheme.error),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(msg)),
+                  ],
+                ),
+                backgroundColor: AppTheme.surfaceElevated,
+              ),
+            );
           }
         },
         child: Container(

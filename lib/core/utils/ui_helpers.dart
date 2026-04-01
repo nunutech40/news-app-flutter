@@ -4,9 +4,9 @@ import 'package:news_app/core/theme/app_theme.dart';
 class UIHelpers {
   /// Menampilkan BottomSheet standar untuk error Jaringan (No Internet & Timeout).
   /// [isTimeout] true jika error adalah timeout, false jika no internet.
-  /// [onTryAgain] callback block function untuk men-trigger ulang aksi sebelumnya.
+  /// [onTryAgain] callback block function untuk men-trigger ulang aksi sebelumnya (Opsional).
   static void showNetworkBottomSheet(
-      BuildContext context, bool isTimeout, VoidCallback onTryAgain) {
+      BuildContext context, bool isTimeout, {VoidCallback? onTryAgain}) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -68,10 +68,12 @@ class UIHelpers {
                   ),
                   onPressed: () {
                     Navigator.pop(context); // Tutup bottomsheet
-                    onTryAgain(); // Panggil ulang fungsi dari page pemanggil
+                    if (onTryAgain != null) {
+                      onTryAgain(); // Panggil ulang fungsi jika ada
+                    }
                   },
-                  child: const Text('Try Again',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(onTryAgain != null ? 'Try Again' : 'Close',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
               const SizedBox(height: 16),

@@ -6,6 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app/core/router/app_router.dart';
 import 'package:news_app/core/theme/app_theme.dart';
+import 'package:news_app/core/bloc/global_alert/global_alert_bloc.dart';
+import 'package:news_app/core/bloc/global_alert/global_alert_state.dart';
+import 'package:news_app/core/utils/ui_helpers.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:news_app/injection_container.dart' as di;
 import 'package:news_app/injection_container.dart';
@@ -136,22 +139,35 @@ class NewsApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // AuthBloc disediakan di level PALING ATAS agar bisa diakses oleh
-    // semua halaman (Splash, Login, Register, Dashboard) tanpa perlu
-    // masing-masing halaman membuat BLoC sendiri.
-    return BlocProvider<AuthBloc>.value(
-      value: sl<AuthBloc>(),
+    // BLoC Global disediakan di level PALING ATAS agar memantau dan
+    // bisa diakses oleh semua halaman.
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<AuthBloc>.value(value: sl<AuthBloc>()),
+        BlocProvider<GlobalAlertBloc>.value(value: sl<GlobalAlertBloc>()),
+      ],
       child: Builder(
         builder: (context) {
           final appRouter = AppRouter(
             authBloc: context.read<AuthBloc>(),
           );
 
-          return MaterialApp.router(
-            title: 'NewsApp',
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.darkTheme,
-            routerConfig: appRouter.router,
+          return BlocListener<GlobalAlertBloc, GlobalAlertState>(
+            listener: (context, state) {
+              if (state is GlobalAlertNetworkError) {
+                final navContext = AppRouter.rootNavigatorKey.currentContext;
+                if (navContext != null) {
+                  // Munculkan UI BottomSheet secara global di atas Navigator
+                  UIHelpers.showNetworkBottomSheet(navContext, state.isTimeout);
+                }
+              }
+            },
+            child: MaterialApp.router(
+              title: 'NewsApp',
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.darkTheme,
+              routerConfig: appRouter.router,
+            ),
           );
         },
       ),

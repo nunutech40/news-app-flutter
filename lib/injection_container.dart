@@ -21,6 +21,9 @@ import 'package:news_app/features/auth/domain/usecases/register_usecase.dart';
 // Auth - Presentation
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 
+// Global Event
+import 'package:news_app/core/bloc/global_alert/global_alert_bloc.dart';
+
 // =============================================================================
 // PANDUAN PEMILIHAN TIPE REGISTRASI DI GET_IT
 // =============================================================================
@@ -88,7 +91,7 @@ Future<void> initDependencies() async {
   // LazySingleton: ApiClient membungkus Dio yang MAHAL untuk diinisialisasi
   // (setup interceptor, timeout, base URL). Cukup satu instance untuk seluruh app.
   sl.registerLazySingleton<ApiClient>(
-    () => ApiClient(tokenProvider: sl()),
+    () => ApiClient(tokenProvider: sl(), globalAlertBloc: sl()),
   );
 
   // LazySingleton: Sama seperti LocalDatasource, ia STATELESS.
@@ -115,6 +118,9 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
 
   // ==================== BLoC ====================
+  // GlobalAlertBloc is a singleton covering the whole app to intercept Dio network errors automatically
+  sl.registerLazySingleton<GlobalAlertBloc>(() => GlobalAlertBloc());
+
   // LazySingleton: AuthBloc SENGAJA dibuat singleton karena STATUS AUTENTIKASI
   // harus PERSISTENT (bertahan) lintas halaman.
   // Contoh: Setelah register sukses di RegisterPage, state `registrationSuccess`

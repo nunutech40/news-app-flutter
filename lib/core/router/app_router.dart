@@ -9,10 +9,13 @@ import 'package:news_app/features/splash/presentation/pages/splash_page.dart';
 
 class AppRouter {
   final AuthBloc authBloc;
+  static final GlobalKey<NavigatorState> rootNavigatorKey =
+      GlobalKey<NavigatorState>();
 
   AppRouter({required this.authBloc});
 
   late final GoRouter router = GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     debugLogDiagnostics: true,
     redirect: (context, state) {
