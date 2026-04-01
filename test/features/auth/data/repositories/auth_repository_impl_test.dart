@@ -220,5 +220,23 @@ void main() {
       // Pastikan data sensitif di hp tetap dihapus meski server tidak merespons
       verify(() => mockLocal.clearAll()).called(1);
     });
+  group('isAuthenticated', () {
+    test('harus return true jika localDatasource memiliki token', () async {
+      when(() => mockLocal.hasTokens()).thenAnswer((_) async => true);
+
+      final result = await repository.isAuthenticated();
+
+      expect(result, isTrue);
+      verify(() => mockLocal.hasTokens()).called(1);
+    });
+
+    test('harus return false jika localDatasource tidak memiliki token', () async {
+      when(() => mockLocal.hasTokens()).thenAnswer((_) async => false);
+
+      final result = await repository.isAuthenticated();
+
+      expect(result, isFalse);
+      verify(() => mockLocal.hasTokens()).called(1);
+    });
   });
 }
