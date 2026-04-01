@@ -47,7 +47,8 @@ void main() {
     const tAccessToken = 'dummy_access_token';
     const tRefreshToken = 'dummy_refresh_token';
 
-    test('saveTokens harus memangil fungsi write pada secure storage dengan key yang benar', () async {
+    // ----- HAPPY PATH -----
+    test('saveTokens harus memangil fungsi write pada secure storage dengan key yang benar (Happy Path)', () async {
       // Arrange
       when(() => mockSecureStorage.write(key: any(named: 'key'), value: any(named: 'value')))
           .thenAnswer((_) async {});
@@ -61,6 +62,22 @@ void main() {
       // Assert
       verify(() => mockSecureStorage.write(key: StorageConstants.accessToken, value: tAccessToken)).called(1);
       verify(() => mockSecureStorage.write(key: StorageConstants.refreshToken, value: tRefreshToken)).called(1);
+    });
+
+    // ----- ERROR PATH -----
+    test('saveTokens harus melempar exception saat storage device gagal menyimpan data (Error Path)', () async {
+      // Skenario dimana KeyStore / Keychain HP user rusak atau akses ditolak
+      when(() => mockSecureStorage.write(key: any(named: 'key'), value: any(named: 'value')))
+          .thenThrow(Exception('Storage Permission Denied'));
+
+      // Act
+      final call = datasource.saveTokens(
+        accessToken: tAccessToken,
+        refreshToken: tRefreshToken,
+      );
+
+      // Assert
+      expect(() => call, throwsA(isA<Exception>()));
     });
 
     test('getAccessToken harus mengambil data berdasarkan konstanta key accessor', () async {
