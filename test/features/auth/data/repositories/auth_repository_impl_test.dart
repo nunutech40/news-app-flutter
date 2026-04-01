@@ -86,6 +86,18 @@ void main() {
       expect(result, const Left(ServerFailure(message: 'Invalid name')));
     });
 
+    test('harus mengembalikan Left(NetworkFailure) ketika remote api melempar NetworkException', () async {
+      // Arrange
+      when(() => mockRemote.register(name: any(named: 'name'), email: any(named: 'email'), password: any(named: 'password')))
+          .thenThrow(const NetworkException(message: 'No Internet'));
+
+      // Act
+      final result = await repository.register(name: tName, email: tEmail, password: tPassword);
+
+      // Assert
+      expect(result, const Left(NetworkFailure(message: 'No Internet')));
+    });
+
     // ----- EDGE PATH -----
     test('harus mengembalikan Left(ServerFailure) ketika lemparan error tipe tak terduga', () async {
       // Arrange
@@ -136,6 +148,20 @@ void main() {
       // Fungsi saveTokens HARUS tidak dipanggil (zero interactions) karena login gagal
       verifyZeroInteractions(mockLocal);
     });
+
+    // ----- NETWORK ERROR PATH -----
+    test('harus mengembalikan Left(NetworkFailure) jika HP tidak ada koneksi saat Login', () async {
+      // Arrange
+      when(() => mockRemote.login(email: any(named: 'email'), password: any(named: 'password')))
+          .thenThrow(const NetworkException(message: 'Connection timed out'));
+
+      // Act
+      final result = await repository.login(email: tEmail, password: tPassword);
+
+      // Assert
+      expect(result, const Left(NetworkFailure(message: 'Connection timed out')));
+      verifyZeroInteractions(mockLocal);
+    });
   });
 
   group('getProfile', () {
@@ -157,10 +183,10 @@ void main() {
     });
 
     // ----- FALLBACK PATH (OFFLINE / CACHED) -----
-    test('harus membaca Cache Lokal jika Remote Server offline (Timeout/Exception)', () async {
+    test('harus membaca Cache Lokal jika Remote melempar NetworkException (Offline/Timeout)', () async {
       // Arrange
       // Remote Error (Misal: No internet connection)
-      when(() => mockRemote.getProfile()).thenThrow(const ServerException(message: 'No Internet'));
+      when(() => mockRemote.getProfile()).thenThrow(const NetworkException(message: 'No Internet'));
       // Tapi untungnya ada cache profile sebelumnya
       when(() => mockLocal.getCachedProfile()).thenAnswer((_) async => {
         'id': 1,
@@ -206,11 +232,11 @@ void main() {
     });
 
     // ----- ERROR CLEANUP SAFETY PATH -----
-    test('harus TETAP memanggil local.clearAll MESKIPUN remote server menolak membuang refresh_token (Logout Aman)', () async {
+    test('harus TETAP memanggil local.clearAll MESKIPUN remote server menolak membuang (Logout Aman)', () async {
       when(() => mockLocal.getRefreshToken()).thenAnswer((_) async => 'token123');
       // Server error karena timeout saat user menekan tombol logout
       when(() => mockRemote.logout(refreshToken: any(named: 'refreshToken')))
-          .thenThrow(const ServerException(message: 'Timeout offline'));
+          .thenThrow(const NetworkException(message: 'Timeout offline'));
       when(() => mockLocal.clearAll()).thenAnswer((_) async {});
 
       final result = await repository.logout();

@@ -63,25 +63,110 @@ class _LoginPageState extends State<LoginPage>
     }
   }
 
+  void _showNetworkBottomSheet(BuildContext context, bool isTimeout) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: const BoxDecoration(
+            color: AppTheme.surfaceCard,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(AppTheme.radiusXl),
+              topRight: Radius.circular(AppTheme.radiusXl),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 48,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.textMuted.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Icon(
+                isTimeout ? Icons.timer_off_outlined : Icons.wifi_off_rounded,
+                size: 64,
+                color: isTimeout ? AppTheme.accentColor : AppTheme.error,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                isTimeout ? 'Request Timeout' : 'No Internet Connection',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isTimeout
+                    ? 'The server took too long to respond. Please check your signal and try again.'
+                    : 'Please check your Wi-Fi or mobile data network and try again.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.textSecondary,
+                    ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context); // Close bottomsheet
+                    _onLogin(); // Re-trigger login
+                  },
+                  child: const Text('Try Again',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
-          if (state.status == AuthStatus.error &&
-              state.errorMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(Icons.error_outline, color: AppTheme.error),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text(state.errorMessage!)),
-                  ],
+          if (state.status == AuthStatus.error && state.errorMessage != null) {
+            final msg = state.errorMessage!;
+            
+            // Periksa tipe interupsi jaringan dari pesan error
+            if (msg.contains('No internet connection')) {
+              _showNetworkBottomSheet(context, false);
+            } else if (msg.contains('Connection timed out')) {
+              _showNetworkBottomSheet(context, true);
+            } else {
+              // Pesan error reguler seperti salah password dsb, gunakan SnackBar
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.error_outline, color: AppTheme.error),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text(msg)),
+                    ],
+                  ),
+                  backgroundColor: AppTheme.surfaceElevated,
                 ),
-                backgroundColor: AppTheme.surfaceElevated,
-              ),
-            );
+              );
+            }
           }
         },
         child: Container(
