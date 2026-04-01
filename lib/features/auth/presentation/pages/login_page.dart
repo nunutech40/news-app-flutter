@@ -18,7 +18,6 @@ class _LoginPageState extends State<LoginPage>
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
 
   late AnimationController _animController;
   late Animation<Offset> _slideAnimation;
@@ -168,27 +167,11 @@ class _LoginPageState extends State<LoginPage>
                           ),
                           const SizedBox(height: 16),
 
-                          // Password field
-                          AuthTextField(
+                          // Password field (Isolated State untuk Re-rendered Performance)
+                          AuthPasswordTextField(
                             controller: _passwordController,
                             label: 'Password',
                             hint: 'Enter your password',
-                            prefixIcon: Icons.lock_outline,
-                            obscureText: _obscurePassword,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: AppTheme.textMuted,
-                                size: 20,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
-                            ),
                             validator: AppValidators.validatePassword,
                           ),
                           const SizedBox(height: 32),

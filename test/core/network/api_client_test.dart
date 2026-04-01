@@ -3,6 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
 import 'package:news_app/core/error/exceptions.dart';
 import 'package:news_app/core/network/api_client.dart';
+import 'package:news_app/core/bloc/global_alert/global_alert_bloc.dart';
+import 'package:news_app/core/bloc/global_alert/global_alert_event.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:news_app/core/bloc/global_alert/global_alert_state.dart';
 
 // =============================================================================
 // ATURAN / PANDUAN UNIT TEST UNTUK API CLIENT (CORE NETWORK)
@@ -23,15 +27,29 @@ import 'package:news_app/core/network/api_client.dart';
 //       (seperti {'data': response}).
 // =============================================================================
 
+class FakeGlobalAlertBloc extends Bloc<GlobalAlertEvent, GlobalAlertState>
+    implements GlobalAlertBloc {
+  final List<GlobalAlertEvent> addedEvents = [];
+  FakeGlobalAlertBloc() : super(GlobalAlertInitial());
+  
+  @override
+  void add(GlobalAlertEvent event) {
+    addedEvents.add(event);
+    super.add(event);
+  }
+}
+
 void main() {
   late Dio dio;
   late DioAdapter dioAdapter;
   late ApiClient apiClient;
+  late FakeGlobalAlertBloc fakeGlobalAlertBloc;
 
   setUp(() {
     dio = Dio(BaseOptions(baseUrl: 'http://test.com'));
     dioAdapter = DioAdapter(dio: dio);
-    apiClient = ApiClient.withDio(dio);
+    fakeGlobalAlertBloc = FakeGlobalAlertBloc();
+    apiClient = ApiClient.withDio(dio, globalAlertBloc: fakeGlobalAlertBloc);
   });
 
   group('ApiClient.request', () {
@@ -303,6 +321,10 @@ void main() {
                 .having((e) => e.statusCode, 'statusCode', isNull),
           ),
         );
+        
+        expect(fakeGlobalAlertBloc.addedEvents, isNotEmpty);
+        expect(fakeGlobalAlertBloc.addedEvents.first, isA<ShowNetworkFailure>());
+        expect((fakeGlobalAlertBloc.addedEvents.first as ShowNetworkFailure).isTimeout, isTrue);
       });
 
       test('send timeout throws ServerException with timeout message', () async {
@@ -382,6 +404,10 @@ void main() {
             ),
           ),
         );
+
+        expect(fakeGlobalAlertBloc.addedEvents, isNotEmpty);
+        expect(fakeGlobalAlertBloc.addedEvents.first, isA<ShowNetworkFailure>());
+        expect((fakeGlobalAlertBloc.addedEvents.first as ShowNetworkFailure).isTimeout, isFalse);
       });
 
       test('cancel DioException falls back to generic message', () async {

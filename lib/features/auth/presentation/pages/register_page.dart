@@ -20,8 +20,6 @@ class _RegisterPageState extends State<RegisterPage>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
 
   late AnimationController _animController;
   late Animation<Offset> _slideAnimation;
@@ -194,52 +192,19 @@ class _RegisterPageState extends State<RegisterPage>
                           const SizedBox(height: 16),
 
                           // Password
-                          AuthTextField(
+                          AuthPasswordTextField(
                             controller: _passwordController,
                             label: 'Password',
                             hint: 'Enter your password',
-                            prefixIcon: Icons.lock_outline,
-                            obscureText: _obscurePassword,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: AppTheme.textMuted,
-                                size: 20,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
-                            ),
                             validator: AppValidators.validatePassword,
                           ),
                           const SizedBox(height: 16),
 
                           // Confirm Password
-                          AuthTextField(
+                          AuthPasswordTextField(
                             controller: _confirmPasswordController,
                             label: 'Confirm Password',
                             hint: 'Re-enter your password',
-                            prefixIcon: Icons.lock_outline,
-                            obscureText: _obscureConfirmPassword,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscureConfirmPassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: AppTheme.textMuted,
-                                size: 20,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscureConfirmPassword =
-                                      !_obscureConfirmPassword;
-                                });
-                              },
-                            ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please confirm your password';
