@@ -268,4 +268,84 @@ void main() {
       expect(() => repository.getArticle('slug-palsu'), throwsException);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // getBookmarks() — simple delegation to local datasource
+  // ---------------------------------------------------------------------------
+  group('getBookmarks', () {
+    final tArticleModel = ArticleModel(
+      id: 1,
+      categoryId: 1,
+      categoryName: 'Tech',
+      authorName: 'Admin',
+      title: 'Title',
+      slug: 'slug',
+      description: 'Desc',
+      imageUrl: 'img.jpg',
+      readTimeMinutes: 2,
+      status: 'published',
+    );
+
+    test('harus mendelegasikan ke localDatasource dan mengembalikan List<Article>', () async {
+      // Arrange
+      when(() => mockLocalDatasource.getBookmarks()).thenAnswer((_) async => [tArticleModel]);
+
+      // Act
+      final result = await repository.getBookmarks();
+
+      // Assert
+      expect(result, isA<List<Article>>());
+      expect(result.length, 1);
+      verify(() => mockLocalDatasource.getBookmarks()).called(1);
+      verifyNoMoreInteractions(mockLocalDatasource);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // toggleBookmark() — simple delegation to local datasource
+  // ---------------------------------------------------------------------------
+  group('toggleBookmark', () {
+    final tArticleModel = ArticleModel(
+      id: 1,
+      categoryId: 1,
+      categoryName: 'Tech',
+      authorName: 'Admin',
+      title: 'Title',
+      slug: 'slug',
+      description: 'Desc',
+      imageUrl: 'img.jpg',
+      readTimeMinutes: 2,
+      status: 'published',
+    );
+
+    test('harus mendelegasikan pemanggilan toggleBookmark ke localDatasource', () async {
+      // Arrange
+      when(() => mockLocalDatasource.toggleBookmark(tArticleModel)).thenAnswer((_) async => Future.value());
+
+      // Act
+      await repository.toggleBookmark(tArticleModel);
+
+      // Assert
+      verify(() => mockLocalDatasource.toggleBookmark(tArticleModel)).called(1);
+      verifyNoMoreInteractions(mockLocalDatasource);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // isBookmarked() — simple delegation to local datasource
+  // ---------------------------------------------------------------------------
+  group('isBookmarked', () {
+    test('harus mendelegasikan pengecekan slug ke localDatasource dan mengembalikan bool', () async {
+      // Arrange
+      when(() => mockLocalDatasource.isBookmarked('test-slug')).thenAnswer((_) async => true);
+
+      // Act
+      final result = await repository.isBookmarked('test-slug');
+
+      // Assert
+      expect(result, isTrue);
+      verify(() => mockLocalDatasource.isBookmarked('test-slug')).called(1);
+      verifyNoMoreInteractions(mockLocalDatasource);
+    });
+  });
 }
