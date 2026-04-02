@@ -558,7 +558,7 @@ class _HorizontalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {/* navigate */},
+      onTap: () => context.push('/article/${article.slug}'),
       child: Container(
         width: 160, // Fixed width for horizontal scrolling items
         decoration: BoxDecoration(
