@@ -36,11 +36,16 @@ import 'package:news_app/features/auth/domain/entities/user.dart';
 
 class MockRemoteDatasource extends Mock implements AuthRemoteDatasource {}
 class MockLocalDatasource extends Mock implements AuthLocalDatasource {}
+class FakeUserModel extends Fake implements UserModel {}
 
 void main() {
   late AuthRepositoryImpl repository;
   late MockRemoteDatasource mockRemote;
   late MockLocalDatasource mockLocal;
+
+  setUpAll(() {
+    registerFallbackValue(FakeUserModel());
+  });
 
   setUp(() {
     mockRemote = MockRemoteDatasource();
@@ -265,6 +270,58 @@ void main() {
 
       expect(result, isFalse);
       verify(() => mockLocal.hasTokens()).called(1);
+    });
+  });
+
+  group('updateProfile', () {
+    final tUser = User(id: 1, name: 'Nunu', email: 'nunu@mail.com', bio: 'Dev', phone: '123', preferences: '', avatarUrl: 'img.jpg', createdAt: DateTime.now());
+    final tUserModel = UserModel(id: 1, name: 'Nunu', email: 'nunu@mail.com', bio: 'Dev', phone: '123', preferences: '', avatarUrl: 'img.jpg', createdAt: tUser.createdAt!);
+
+    test('harus return Right(User) dan cache profile lokal setelah sukses update remote', () async {
+      // Arrange
+      when(() => mockRemote.updateProfile(any())).thenAnswer((_) async => tUserModel);
+      when(() => mockLocal.cacheProfile(
+            id: any(named: 'id'),
+            name: any(named: 'name'),
+            email: any(named: 'email'),
+            avatarUrl: any(named: 'avatarUrl'),
+            bio: any(named: 'bio'),
+            phone: any(named: 'phone'),
+            preferences: any(named: 'preferences'),
+          )).thenAnswer((_) async {});
+
+      // Act
+      final result = await repository.updateProfile(tUser);
+
+      // Assert
+      expect(result, Right<Failure, User>(tUserModel));
+      verify(() => mockRemote.updateProfile(any())).called(1);
+      verify(() => mockLocal.cacheProfile(
+            id: 1,
+            name: 'Nunu',
+            email: 'nunu@mail.com',
+            avatarUrl: 'img.jpg',
+            bio: 'Dev',
+            phone: '123',
+            preferences: '',
+          )).called(1);
+    });
+
+    test('harus return Left(ServerFailure) jika remote update melempar ServerException', () async {
+      // Arrange
+      when(() => mockRemote.updateProfile(any())).thenThrow(const ServerException(message: 'Error update'));
+
+      // Act
+      final result = await repository.updateProfile(tUser);
+
+      // Assert
+      expect(result, const Left(ServerFailure(message: 'Error update')));
+      verify(() => mockRemote.updateProfile(any())).called(1);
+      verifyNever(() => mockLocal.cacheProfile(
+            id: any(named: 'id'),
+            name: any(named: 'name'),
+            email: any(named: 'email'),
+          ));
     });
   });
 }

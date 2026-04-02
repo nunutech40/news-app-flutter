@@ -576,21 +576,50 @@ UI             AuthState                SnackBar / Dialog
 
 ### 8.2 Exception Types (Data Layer)
 
+Setiap exception merepresentasikan **satu sumber masalah yang berbeda**. Pembagian ini penting karena masing-masing membutuhkan *respon UI yang berbeda* kepada pengguna.
+
 ```dart
-// Thrown by ApiClient and Datasources
+/// HTTP berhasil terkirim, tapi server menolak/error (400, 404, 500).
+/// Selalu punya pesan dari server.
 class ServerException implements Exception {
   final String message;
   final int? statusCode;
 }
 
+/// Masalah infrastruktur: HP tidak bisa menjangkau server sama sekali.
+/// Timeout, mode pesawat, DNS down, kuota habis.
+class NetworkException implements Exception {
+  final String message;
+}
+
+/// Masalah lokal: SharedPreferences / SecureStorage gagal baca/tulis.
+/// Storage penuh, OS mengunci, data null.
 class CacheException implements Exception {
   final String message;
 }
 
+/// Sesi tidak bisa dipulihkan: refresh token expired / dicabut server.
+/// AuthInterceptor melempar ini → BLoC bereaksi force-logout.
 class UnauthorizedException implements Exception {
   final String message;
 }
+
+/// Kontrak JSON rusak: field berubah tipe diam-diam, null tak terduga.
+/// Biasanya bug komunikasi Backend-Frontend, kirim ke Crashlytics.
+class ParsingException implements Exception {
+  final String message;
+}
 ```
+
+**Kenapa dipisah 5, bukan 1 Exception generik?**
+
+| Exception | Sumber Masalah | Respon UI yang Tepat |
+|-----------|---------------|----------------------|
+| `ServerException` | Logic error di server | Tampilkan pesan dari server (*"Email sudah dipakai"*) |
+| `NetworkException` | Infrastruktur/jaringan | *"Periksa koneksi internet Anda"* |
+| `CacheException` | Local storage HP | *"Gagal memuat data tersimpan"* |
+| `UnauthorizedException` | Sesi token mati total | Auto-redirect ke `/login` |
+| `ParsingException` | Format JSON berubah | *"Terjadi kesalahan tak terduga"* + log Crashlytics |
 
 ### 8.3 Failure Types (Domain Layer)
 
@@ -602,21 +631,22 @@ abstract class Failure extends Equatable {
 }
 
 class ServerFailure extends Failure { ... }
-class CacheFailure extends Failure { ... }
 class NetworkFailure extends Failure { ... }
+class CacheFailure extends Failure { ... }
 class UnauthorizedFailure extends Failure { ... }
 ```
 
 ### 8.4 ApiClient Centralized Error Mapping
 
-`ApiClient._handleDioError()` memetakan semua `DioException` ke `ServerException`:
+`ApiClient._handleDioError()` memetakan semua `DioException` ke Exception yang sesuai:
 
-| DioExceptionType | Mapped Message |
-|-----------------|----------------|
-| `connectionTimeout`, `sendTimeout`, `receiveTimeout` | "Connection timed out. Please try again." |
-| `connectionError` | "No internet connection." |
-| `badResponse` | Extracted from `response.data['message']` or "Server error (code)" |
-| Default | `e.message` or "Something went wrong" |
+| DioExceptionType | Mapped Exception | Mapped Message |
+|-----------------|-----------------|----------------|
+| `connectionTimeout`, `sendTimeout`, `receiveTimeout` | `NetworkException` | "Connection timed out. Please try again." |
+| `connectionError` | `NetworkException` | "No internet connection." |
+| `badResponse` (401) | `UnauthorizedException` | Extracted from response atau "Unauthorized" |
+| `badResponse` (4xx/5xx) | `ServerException` | Extracted from `response.data['message']` atau "Server error (code)" |
+| Default / unknown | `ServerException` | `e.message` atau "Something went wrong" |
 
 ### 8.5 Design Decision: Why Either instead of try-catch?
 

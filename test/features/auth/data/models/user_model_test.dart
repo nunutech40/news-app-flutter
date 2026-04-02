@@ -96,6 +96,10 @@ void main() {
         'id': 1,
         'name': 'Nunu Nugraha',
         'email': 'nunu@mail.com',
+        'avatar_url': '',
+        'bio': '',
+        'phone': '',
+        'preferences': '',
         'created_at': '2026-04-01T12:00:00.000Z',
       };
       

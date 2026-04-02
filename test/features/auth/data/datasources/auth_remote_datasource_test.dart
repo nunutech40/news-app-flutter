@@ -245,4 +245,66 @@ void main() {
       expect(() => call, throwsA(isA<ServerException>()));
     });
   });
+
+  group('updateProfile', () {
+    final tUserModel = UserModel(
+      id: 1,
+      name: 'Nunu N',
+      email: 'nunu@mail.com',
+      avatarUrl: 'image.jpg',
+      bio: 'Developer',
+      phone: '08123',
+      preferences: 'technology,sports',
+      createdAt: DateTime.now(),
+    );
+
+    final tRequestData = {
+      'name': 'Nunu N',
+      'avatar_url': 'image.jpg',
+      'bio': 'Developer',
+      'phone': '08123',
+      'preferences': 'technology,sports',
+    };
+
+    final tJsonResponseSuccess = {
+      'success': true,
+      'data': {
+        'id': '1',
+        'name': 'Nunu N',
+        'email': 'nunu@mail.com',
+        'avatar_url': 'image.jpg',
+        'bio': 'Developer',
+        'phone': '08123',
+        'preferences': 'technology,sports',
+        'created_at': tUserModel.createdAt!.toIso8601String(),
+      }
+    };
+
+    test('harus return UserModel jika request update valid dan success:true', () async {
+      // Arrange
+      when(() => mockApiClient.request(any(), any(), data: any(named: 'data')))
+          .thenAnswer((_) async => tJsonResponseSuccess);
+
+      // Act
+      final result = await datasource.updateProfile(tUserModel);
+
+      // Assert
+      expect(result, isA<UserModel>());
+      expect(result.name, 'Nunu N');
+      expect(result.bio, 'Developer');
+      verify(() => mockApiClient.request('PUT', ApiConstants.profile, data: tRequestData)).called(1);
+    });
+
+    test('harus throw ServerException jika request update menghasilkan API error', () async {
+      // Arrange
+      when(() => mockApiClient.request(any(), any(), data: any(named: 'data')))
+          .thenThrow(const ServerException(message: 'Validation error: name too short'));
+
+      // Act
+      final call = datasource.updateProfile(tUserModel);
+
+      // Assert
+      expect(() => call, throwsA(isA<ServerException>().having((e) => e.message, 'message', 'Validation error: name too short')));
+    });
+  });
 }
