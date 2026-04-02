@@ -4,9 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:news_app/features/auth/presentation/widgets/edit_profile_bottom_sheet.dart';
 import 'package:news_app/core/theme/app_theme.dart';
 import 'package:news_app/core/utils/date_helper.dart';
+import 'package:news_app/core/widgets/empty_view.dart';
 import 'package:news_app/features/news/domain/entities/article.dart';
 import 'package:news_app/features/news/domain/entities/category.dart';
 import 'package:news_app/features/news/presentation/cubit/category_cubit.dart';
@@ -337,7 +337,8 @@ class _FeedContent extends StatelessWidget {
       return const Column(
         children: [
           SizedBox(height: 60),
-          _EmptyView(
+          EmptyView(
+            icon: Icons.article_outlined,
             message: 'Belum ada berita yang tersedia untuk saat ini.\nSilakan tarik ke bawah untuk memuat ulang.',
           ),
         ],
@@ -884,41 +885,6 @@ class _ErrorView extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ── Empty View ────────────────────────────────────────────────────────────────
-class _EmptyView extends StatelessWidget {
-  final String message;
-  const _EmptyView({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.inbox_rounded,
-              color: AppTheme.textMuted.withOpacity(0.5), size: 48),
-          const SizedBox(height: 16),
-          const Text(
-            'Data Kosong',
-            style: TextStyle(
-              color: AppTheme.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: AppTheme.textMuted, height: 1.5, fontSize: 13),
-          ),
-        ],
       ),
     );
   }
