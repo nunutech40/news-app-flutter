@@ -34,14 +34,7 @@ class Article extends Equatable {
   /// Convenience getter — use thumbnail for lists, full image for detail
   String get displayImage => thumbnailUrl ?? imageUrl;
 
-  /// Formatted time ago label
-  String get timeAgo {
-    if (publishedAt == null) return '';
-    final diff = DateTime.now().difference(publishedAt!);
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
-  }
+
 
   @override
   List<Object?> get props => [id, slug];

@@ -50,30 +50,7 @@ void main() {
       });
     });
 
-    group('timeAgo', () {
-      test('harus kembalikan string kosong jika publishedAt null', () {
-        final article = createMockArticle(publishedAt: null);
-        expect(article.timeAgo, '');
-      });
 
-      test('harus kembalikan menit jika selisih waktu di bawah 1 jam', () {
-        final date = DateTime.now().subtract(const Duration(minutes: 30));
-        final article = createMockArticle(publishedAt: date);
-        expect(article.timeAgo, '30m ago');
-      });
-
-      test('harus kembalikan jam jika selisih waktu di bawah 1 hari', () {
-        final date = DateTime.now().subtract(const Duration(hours: 5));
-        final article = createMockArticle(publishedAt: date);
-        expect(article.timeAgo, '5h ago');
-      });
-
-      test('harus kembalikan hari jika selisih waktu lebih dari 24 jam', () {
-        final date = DateTime.now().subtract(const Duration(days: 3));
-        final article = createMockArticle(publishedAt: date);
-        expect(article.timeAgo, '3d ago');
-      });
-    });
 
     group('Equatable props', () {
       test('harus menganggap setara jika id dan slug sama', () {
