@@ -25,6 +25,10 @@ abstract class AuthLocalDatasource implements TokenProvider {
     required int id,
     required String name,
     required String email,
+    String avatarUrl = '',
+    String bio = '',
+    String phone = '',
+    String preferences = '',
   });
   Future<Map<String, dynamic>?> getCachedProfile();
   Future<void> clearProfile();
@@ -92,11 +96,19 @@ class AuthLocalDatasourceImpl implements AuthLocalDatasource {
     required int id,
     required String name,
     required String email,
+    String avatarUrl = '',
+    String bio = '',
+    String phone = '',
+    String preferences = '',
   }) async {
     await Future.wait([
       sharedPreferences.setInt(StorageConstants.profileId, id),
       sharedPreferences.setString(StorageConstants.profileName, name),
       sharedPreferences.setString(StorageConstants.profileEmail, email),
+      sharedPreferences.setString(StorageConstants.profileAvatar, avatarUrl),
+      sharedPreferences.setString(StorageConstants.profileBio, bio),
+      sharedPreferences.setString(StorageConstants.profilePhone, phone),
+      sharedPreferences.setString(StorageConstants.profilePreferences, preferences),
     ]);
   }
 
@@ -105,10 +117,22 @@ class AuthLocalDatasourceImpl implements AuthLocalDatasource {
     final id = sharedPreferences.getInt(StorageConstants.profileId);
     final name = sharedPreferences.getString(StorageConstants.profileName);
     final email = sharedPreferences.getString(StorageConstants.profileEmail);
+    final avatarUrl = sharedPreferences.getString(StorageConstants.profileAvatar) ?? '';
+    final bio = sharedPreferences.getString(StorageConstants.profileBio) ?? '';
+    final phone = sharedPreferences.getString(StorageConstants.profilePhone) ?? '';
+    final preferences = sharedPreferences.getString(StorageConstants.profilePreferences) ?? '';
 
     if (id == null || name == null || email == null) return null;
 
-    return {'id': id, 'name': name, 'email': email};
+    return {
+      'id': id, 
+      'name': name, 
+      'email': email,
+      'avatarUrl': avatarUrl,
+      'bio': bio,
+      'phone': phone,
+      'preferences': preferences,
+    };
   }
 
   @override
@@ -117,6 +141,10 @@ class AuthLocalDatasourceImpl implements AuthLocalDatasource {
       sharedPreferences.remove(StorageConstants.profileId),
       sharedPreferences.remove(StorageConstants.profileName),
       sharedPreferences.remove(StorageConstants.profileEmail),
+      sharedPreferences.remove(StorageConstants.profileAvatar),
+      sharedPreferences.remove(StorageConstants.profileBio),
+      sharedPreferences.remove(StorageConstants.profilePhone),
+      sharedPreferences.remove(StorageConstants.profilePreferences),
     ]);
   }
 

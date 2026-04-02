@@ -10,6 +10,11 @@ class ApiConstants {
   static const String profile = '/api/v1/auth/me';
   static const String logout = '/api/v1/auth/logout';
   static const String health = '/health';
+
+  // News endpoints
+  static const String newsCategories = '/api/v1/news/categories';
+  static const String newsFeed = '/api/v1/news';
+  static const String newsDetail = '/api/v1/news'; // + /{slug}
 }
 
 class StorageConstants {
@@ -23,4 +28,8 @@ class StorageConstants {
   static const String profileId = 'profile_id';
   static const String profileName = 'profile_name';
   static const String profileEmail = 'profile_email';
+  static const String profileAvatar = 'profile_avatar';
+  static const String profileBio = 'profile_bio';
+  static const String profilePhone = 'profile_phone';
+  static const String profilePreferences = 'profile_preferences';
 }

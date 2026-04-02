@@ -5,6 +5,10 @@ class UserModel extends User {
     required super.id,
     required super.name,
     required super.email,
+    super.avatarUrl = '',
+    super.bio = '',
+    super.phone = '',
+    super.preferences = '',
     super.createdAt,
   });
 
@@ -14,6 +18,11 @@ class UserModel extends User {
       id: _parseInt(json['id']),
       name: json['name']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
+      avatarUrl: json['avatar_url']?.toString() ?? '',
+      bio: json['bio']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? '',
+      // sometimes preference comes as map, we encode it as string for simple state management
+      preferences: json['preferences'] != null ? json['preferences'].toString() : '',
       createdAt: _parseDateTime(json['created_at']),
     );
   }
@@ -23,6 +32,10 @@ class UserModel extends User {
       'id': id,
       'name': name,
       'email': email,
+      'avatar_url': avatarUrl,
+      'bio': bio,
+      'phone': phone,
+      'preferences': preferences,
       'created_at': createdAt?.toIso8601String(),
     };
   }

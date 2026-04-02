@@ -3,6 +3,7 @@ import 'package:news_app/core/error/exceptions.dart';
 import 'package:news_app/core/error/failures.dart';
 import 'package:news_app/features/auth/data/datasources/auth_local_datasource.dart';
 import 'package:news_app/features/auth/data/datasources/auth_remote_datasource.dart';
+import 'package:news_app/features/auth/data/models/user_model.dart';
 import 'package:news_app/features/auth/domain/entities/auth_tokens.dart';
 import 'package:news_app/features/auth/domain/entities/user.dart';
 import 'package:news_app/features/auth/domain/repositories/auth_repository.dart';
@@ -77,10 +78,15 @@ class AuthRepositoryImpl implements AuthRepository {
       final user = await remoteDatasource.getProfile();
 
       // Cache profile locally
+      // Cache profile locally
       await localDatasource.cacheProfile(
         id: user.id,
         name: user.name,
         email: user.email,
+        avatarUrl: user.avatarUrl,
+        bio: user.bio,
+        phone: user.phone,
+        preferences: user.preferences,
       );
 
       return Right(user);
@@ -92,6 +98,10 @@ class AuthRepositoryImpl implements AuthRepository {
           id: cached['id'] as int,
           name: cached['name'] as String,
           email: cached['email'] as String,
+          avatarUrl: cached['avatarUrl'] as String? ?? '',
+          bio: cached['bio'] as String? ?? '',
+          phone: cached['phone'] as String? ?? '',
+          preferences: cached['preferences'] as String? ?? '',
         ));
       }
       return Left(ServerFailure(
@@ -106,8 +116,49 @@ class AuthRepositoryImpl implements AuthRepository {
           id: cached['id'] as int,
           name: cached['name'] as String,
           email: cached['email'] as String,
+          avatarUrl: cached['avatarUrl'] as String? ?? '',
+          bio: cached['bio'] as String? ?? '',
+          phone: cached['phone'] as String? ?? '',
+          preferences: cached['preferences'] as String? ?? '',
         ));
       }
+      return Left(NetworkFailure(message: e.message));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, User>> updateProfile(User user) async {
+    try {
+      // Cast the entity back to a model (or create one on the fly)
+      final userModel = UserModel(
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatarUrl: user.avatarUrl,
+        bio: user.bio,
+        phone: user.phone,
+        preferences: user.preferences,
+      );
+
+      final updatedUser = await remoteDatasource.updateProfile(userModel);
+
+      // Refresh cache profile locally
+      await localDatasource.cacheProfile(
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        avatarUrl: updatedUser.avatarUrl,
+        bio: updatedUser.bio,
+        phone: updatedUser.phone,
+        preferences: updatedUser.preferences,
+      );
+
+      return Right(updatedUser);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
+    } on NetworkException catch (e) {
       return Left(NetworkFailure(message: e.message));
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));

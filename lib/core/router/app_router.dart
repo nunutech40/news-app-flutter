@@ -4,8 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:news_app/features/auth/presentation/pages/login_page.dart';
 import 'package:news_app/features/auth/presentation/pages/register_page.dart';
-import 'package:news_app/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:news_app/features/news/presentation/cubit/category_cubit.dart';
+import 'package:news_app/features/news/presentation/cubit/news_feed_cubit.dart';
+import 'package:news_app/features/news/presentation/cubit/trending_cubit.dart';
+import 'package:news_app/features/news/presentation/pages/news_feed_page.dart';
+import 'package:news_app/features/auth/presentation/pages/profile_page.dart';
 import 'package:news_app/features/splash/presentation/pages/splash_page.dart';
+import 'package:news_app/injection_container.dart';
 
 class AppRouter {
   final AuthBloc authBloc;
@@ -75,7 +80,19 @@ class AppRouter {
       GoRoute(
         path: '/dashboard',
         name: 'dashboard',
-        builder: (context, state) => const DashboardPage(),
+        builder: (context, state) => MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (_) => sl<CategoryCubit>()..load()),
+            BlocProvider(create: (_) => sl<TrendingCubit>()..load()),
+            BlocProvider(create: (_) => sl<NewsFeedCubit>()..load()),
+          ],
+          child: const NewsFeedPage(),
+        ),
+      ),
+      GoRoute(
+        path: '/profile',
+        name: 'profile',
+        builder: (context, state) => const ProfilePage(),
       ),
     ],
   );

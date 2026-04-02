@@ -17,9 +17,23 @@ import 'package:news_app/features/auth/domain/usecases/get_profile_usecase.dart'
 import 'package:news_app/features/auth/domain/usecases/login_usecase.dart';
 import 'package:news_app/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:news_app/features/auth/domain/usecases/register_usecase.dart';
+import 'package:news_app/features/auth/domain/usecases/update_profile_usecase.dart';
 
 // Auth - Presentation
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:news_app/features/auth/presentation/cubit/profile_cubit.dart';
+
+// News - Data
+import 'package:news_app/features/news/data/datasources/news_remote_datasource.dart';
+import 'package:news_app/features/news/data/repositories/news_repository_impl.dart';
+
+// News - Domain
+import 'package:news_app/features/news/domain/repositories/news_repository.dart';
+
+// News - Presentation
+import 'package:news_app/features/news/presentation/cubit/category_cubit.dart';
+import 'package:news_app/features/news/presentation/cubit/news_feed_cubit.dart';
+import 'package:news_app/features/news/presentation/cubit/trending_cubit.dart';
 
 // Global Event
 import 'package:news_app/core/bloc/global_alert/global_alert_bloc.dart';
@@ -115,6 +129,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => LoginUseCase(sl()));
   sl.registerLazySingleton(() => RegisterUseCase(sl()));
   sl.registerLazySingleton(() => GetProfileUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateProfileUseCase(sl()));
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
 
   // ==================== BLoC ====================
@@ -138,4 +153,22 @@ Future<void> initDependencies() async {
       authRepository: sl(),
     ),
   );
+
+  // ==================== News ====================
+  // LazySingleton: Datasource & Repository stateless
+  sl.registerLazySingleton<NewsRemoteDatasource>(
+    () => NewsRemoteDatasourceImpl(apiClient: sl()),
+  );
+  sl.registerLazySingleton<NewsRepository>(
+    () => NewsRepositoryImpl(remoteDatasource: sl()),
+  );
+
+  // Factory: Cubits must be fresh every time dashboard is opened
+  sl.registerFactory(() => CategoryCubit(sl()));
+  sl.registerFactory(() => NewsFeedCubit(sl()));
+  sl.registerFactory(() => TrendingCubit(sl()));
+  sl.registerFactory(() => ProfileCubit(
+    updateProfileUseCase: sl(),
+    apiClient: sl(),
+  ));
 }

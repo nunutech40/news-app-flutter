@@ -20,6 +20,9 @@ abstract class AuthRepository {
   /// Get current user profile
   Future<Either<Failure, User>> getProfile();
 
+  /// Update user profile
+  Future<Either<Failure, User>> updateProfile(User user);
+
   /// Logout user
   Future<Either<Failure, void>> logout();
 

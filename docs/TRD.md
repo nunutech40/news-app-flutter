@@ -1144,4 +1144,69 @@ Aplikasi telah dilengkapi dengan perlindungan standar rilis produksi pada level 
 
 ---
 
+## 18. Profile Management Expansion (Updated 2026-04-02)
+
+### 18.1 Architecture Strategy (Global + Local BLoC Hybrid)
+To implement a robust Profile Management system where the user can update their Avatar, Bio, and Preferences, the application employs a hybrid State Management approach:
+
+1. **Global Provider (`AuthBloc`)**
+   Serves as the Single Source of Truth for the `User` object (via `AuthState.user`). Used for instantly fetching profile pictures rendering globally across UI spaces like the App Bar or Menu Drawer (retrieves the cached state straight from RAM instead of network or disk requests).
+2. **Local Provider (`ProfileCubit`)**
+   Instantiated specifically for the `EditProfilePage`. Manages local transient form state instances (`isFormSubmitting`, validation text errors).
+3. **Data Delegation/Syncing**
+   After successfully dispatching a `PUT /profile` request locally within the `ProfileCubit`, the cubit propagates a `UserUpdated` event payload into the Global `AuthBloc`, assuring seamless silent-recompilation of dependent UI components.
+
+### 18.2 UI Characteristics
+* Leverages aesthetic premium bottom-sheets alongside modern, borderless TextField elements to conform with the application's clean design ethos.
+
+---
+
 *End of Technical Requirements Document*
+
+### 9.6 Global-Local Hybrid State Strategy (Profile Management)
+
+Sistem profil menggunakan pola **Global-Local Hybrid BLoC**. Ini memecahkan dua masalah:
+1. Menghindari terlalu banyak fetch API jika kita tidak menyimpan datanya global.
+2. Mencegah kebocoran RAM/Memory leak jika state Form/Loading dari halaman Edit Profile di-keep di Global.
+
+#### Diagram Interaksi (Tree & Flow)
+
+```mermaid
+graph TD
+    classDef global fill:#1A237E,stroke:#3949AB,color:#FFF,stroke-width:2px;
+    classDef local fill:#004D40,stroke:#00897B,color:#FFF,stroke-width:2px;
+    classDef ui fill:#424242,stroke:#BDBDBD,color:#FFF,stroke-width:2px;
+
+    Main[main.dart - Root]:::ui -->|Injects Global| Auth[AuthBloc - Global Source of Truth]:::global
+    
+    Auth --> AppRouter[AppRouter]:::ui
+    AppRouter --> Dashboard[NewsFeedPage]:::ui
+    AppRouter --> Profile[ProfilePage]:::ui
+    
+    Dashboard -->|Reads from RAM| Auth
+    Profile -->|Reads from RAM| Auth
+    
+    Profile -->|Action: onTap Edit| BottomSheet[EditProfileBottomSheet]:::ui
+    
+    BottomSheet -->|Creates Ephemeral instance| Cubit[ProfileCubit - Local Form Manager]:::local
+    
+    Cubit -->|1. Request API| API[PUT /auth/me]
+    API -.->|2. Success Response| Cubit
+    
+    Cubit -.->|3. Dipatch Event| Event[AuthUserUpdated Event]
+    Event -.->|4. Updates Global RAM state| Auth
+    
+    Auth -.->|5. Auto-renders changes| Profile
+    Auth -.->|5. Auto-renders changes| Dashboard
+    
+    BottomSheet -.->|6. Dispose on Close| Cubit
+```
+
+#### Alur Komunikasi (Publisher-Subscriber)
+1. **Source of Truth**: `AuthBloc` (Global) meng-host entity `User` di RAM.
+2. **Pembaca Data (Subscriber)**: `ProfilePage` & `NewsFeedPage` me-render profil dengan membaca cache memori dari `AuthBloc` (Tidak pernah call API `getProfile` lag saat navigasi layar).
+3. **Pekerja Form (Local)**: `ProfileCubit` dan `EditProfileBottomSheet` di-inisialisasi secara independen dan sementara (ephemeral). Bertugas mengatur life-cycle seperti proses upload gambar, loading spinner, handle validasi form.
+4. **Jembatan Sinkronisasi**: Begitu `ProfileCubit` sukses mengirim data ke server, dia bertindak menjembatani perubahan tersebut ke *Global State* dengan perintah:
+`context.read<AuthBloc>().add(AuthUserUpdated(state.updatedUser))`
+5. **Reaktivitas UI Secara Transparan**: Semua layer pembaca (`ProfilePage` & `NewsFeedPage` app bar) langung secara massal *auto-render* UI mereka sesaat setelah mereka mendengar bahwa `AuthBloc` mem-broadcast update tersebut.
+6. **Zero Memory Footprint**: Form `ProfileCubit` dihancurkan (garbage collected) setelah lembar sheet ditutup.

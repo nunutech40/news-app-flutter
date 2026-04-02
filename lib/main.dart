@@ -53,7 +53,7 @@ void main() async {
   // Atur tampilan status bar (jam, sinyal, baterai) agar sesuai tema gelap.
   // - statusBarColor: transparan agar menyatu dengan background app.
   // - statusBarIconBrightness: light (ikon putih) untuk tema gelap.
-  SystemChrome.setSystemUIOverlayStyle(const SystemUIOverlayStyle(
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light, // Android
     statusBarBrightness: Brightness.dark,      // iOS

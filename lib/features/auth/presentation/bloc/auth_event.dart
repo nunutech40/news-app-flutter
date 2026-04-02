@@ -51,3 +51,12 @@ class AuthProfileRequested extends AuthEvent {
 class AuthLogoutRequested extends AuthEvent {
   const AuthLogoutRequested();
 }
+
+/// Update user data in memory (e.g., after profile edit)
+class AuthUserUpdated extends AuthEvent {
+  final User user;
+  const AuthUserUpdated(this.user);
+
+  @override
+  List<Object?> get props => [user];
+}

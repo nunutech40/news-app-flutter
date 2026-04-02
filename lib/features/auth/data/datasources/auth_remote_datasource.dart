@@ -18,6 +18,8 @@ abstract class AuthRemoteDatasource {
 
   Future<UserModel> getProfile();
 
+  Future<UserModel> updateProfile(UserModel user);
+
   Future<void> logout({required String refreshToken});
 }
 
@@ -77,6 +79,28 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
   Future<void> logout({required String refreshToken}) async {
     await apiClient.request('POST', ApiConstants.logout,
       data: {'refresh_token': refreshToken},
+    );
+  }
+
+  @override
+  Future<UserModel> updateProfile(UserModel user) async {
+    final response = await apiClient.request(
+      'PUT', 
+      ApiConstants.profile,
+      data: {
+        'name': user.name,
+        'avatar_url': user.avatarUrl,
+        'bio': user.bio,
+        'phone': user.phone,
+        'preferences': user.preferences,
+      },
+    );
+
+    if (response['success'] == true) {
+      return UserModel.fromJson(response['data'] as Map<String, dynamic>);
+    }
+    throw ServerException(
+      message: response['message'] as String? ?? 'Failed to update profile',
     );
   }
 }
