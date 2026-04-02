@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app/core/theme/app_theme.dart';
+import 'package:news_app/features/news/presentation/cubit/bookmark_cubit.dart';
 
 // Pages
 import 'package:news_app/features/news/presentation/pages/news_feed_page.dart';
@@ -47,6 +49,9 @@ class _DashboardPageState extends State<DashboardPage> {
             setState(() {
               _currentIndex = index;
             });
+            if (index == 2) {
+              context.read<BookmarkCubit>().loadBookmarks();
+            }
           },
           backgroundColor: AppTheme.backgroundDark,
           type: BottomNavigationBarType.fixed,
