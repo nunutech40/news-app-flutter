@@ -74,6 +74,7 @@ class _NewsFeedViewState extends State<_NewsFeedView> {
               ),
           child: CustomScrollView(
             controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
             slivers: [
               // ── App Bar ────────────────────────────────────────────────────
               const SliverToBoxAdapter(child: _NewsAppBar()),
@@ -332,7 +333,16 @@ class _FeedContent extends StatelessWidget {
   }
 
   Widget _buildList(List<Article> articles) {
-    if (articles.isEmpty) return const SizedBox.shrink();
+    if (articles.isEmpty) {
+      return const Column(
+        children: [
+          SizedBox(height: 60),
+          _EmptyView(
+            message: 'Belum ada berita yang tersedia untuk saat ini.\nSilakan tarik ke bawah untuk memuat ulang.',
+          ),
+        ],
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -874,6 +884,41 @@ class _ErrorView extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Empty View ────────────────────────────────────────────────────────────────
+class _EmptyView extends StatelessWidget {
+  final String message;
+  const _EmptyView({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.inbox_rounded,
+              color: AppTheme.textMuted.withOpacity(0.5), size: 48),
+          const SizedBox(height: 16),
+          const Text(
+            'Data Kosong',
+            style: TextStyle(
+              color: AppTheme.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppTheme.textMuted, height: 1.5, fontSize: 13),
+          ),
+        ],
       ),
     );
   }
