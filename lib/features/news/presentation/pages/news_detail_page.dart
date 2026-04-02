@@ -187,7 +187,7 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
                                   ),
                                 ),
                                 Text(
-                                  DateHelper.format(article.publishedAt),
+                                  DateHelper.timeAgo(article.publishedAt),
                                   style: const TextStyle(
                                     color: AppTheme.textMuted,
                                     fontSize: 12,
