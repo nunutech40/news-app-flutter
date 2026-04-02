@@ -37,6 +37,7 @@ import 'package:news_app/features/news/domain/usecases/get_news_feed_usecase.dar
 import 'package:news_app/features/news/presentation/cubit/category_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/news_feed_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/trending_cubit.dart';
+import 'package:news_app/features/news/presentation/cubit/search_cubit.dart';
 
 // Global Event
 import 'package:news_app/core/bloc/global_alert/global_alert_bloc.dart';
@@ -175,6 +176,7 @@ Future<void> initDependencies() async {
   sl.registerFactory(() => CategoryCubit(sl()));
   sl.registerFactory(() => NewsFeedCubit(sl()));
   sl.registerFactory(() => TrendingCubit(sl()));
+  sl.registerFactory(() => SearchCubit(sl()));
   sl.registerFactory(() => ProfileCubit(
     updateProfileUseCase: sl(),
     apiClient: sl(),

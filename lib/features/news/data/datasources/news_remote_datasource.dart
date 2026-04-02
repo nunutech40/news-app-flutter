@@ -6,6 +6,7 @@ abstract class NewsRemoteDatasource {
   Future<List<CategoryModel>> getCategories();
   Future<Map<String, dynamic>> getFeed({
     String? category,
+    String? searchQuery,
     int page = 1,
     int limit = 10,
     bool includeHero = true,
@@ -28,6 +29,7 @@ class NewsRemoteDatasourceImpl implements NewsRemoteDatasource {
   @override
   Future<Map<String, dynamic>> getFeed({
     String? category,
+    String? searchQuery,
     int page = 1,
     int limit = 10,
     bool includeHero = true,
@@ -37,6 +39,7 @@ class NewsRemoteDatasourceImpl implements NewsRemoteDatasource {
       'limit': limit,
       'include_hero': includeHero,
       if (category != null) 'category': category,
+      if (searchQuery != null && searchQuery.isNotEmpty) 'q': searchQuery,
     };
     final res = await apiClient.request(
       'GET',

@@ -6,6 +6,7 @@ abstract class NewsRepository {
 
   Future<({Article? hero, List<Article> feed, int totalPages})> getFeed({
     String? category,
+    String? searchQuery,
     int page = 1,
     int limit = 10,
     bool includeHero = true,

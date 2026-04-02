@@ -63,11 +63,12 @@ class NewsFeedCubit extends Cubit<NewsFeedState> {
 
   NewsFeedCubit(this._useCase) : super(NewsFeedInitial());
 
-  Future<void> load({String? category}) async {
+  Future<void> load({String? category, String? searchQuery}) async {
     emit(NewsFeedLoading());
     try {
       final result = await _useCase(GetNewsFeedParams(
         category: category,
+        searchQuery: searchQuery,
         page: 1,
         limit: 10,
         includeHero: true,
@@ -84,7 +85,7 @@ class NewsFeedCubit extends Cubit<NewsFeedState> {
   }
 
   /// Append next page — for infinite scroll
-  Future<void> loadMore({String? category}) async {
+  Future<void> loadMore({String? category, String? searchQuery}) async {
     final current = state;
     if (current is! NewsFeedLoaded || !current.hasMore || current.isLoadingMore) return;
 
@@ -93,6 +94,7 @@ class NewsFeedCubit extends Cubit<NewsFeedState> {
       final nextPage = current.currentPage + 1;
       final result = await _useCase(GetNewsFeedParams(
         category: category,
+        searchQuery: searchQuery,
         page: nextPage,
         limit: 10,
         includeHero: false,
@@ -108,5 +110,6 @@ class NewsFeedCubit extends Cubit<NewsFeedState> {
     }
   }
 
-  Future<void> refresh({String? category}) => load(category: category);
+  Future<void> refresh({String? category, String? searchQuery}) => 
+      load(category: category, searchQuery: searchQuery);
 }

@@ -15,12 +15,14 @@ class NewsRepositoryImpl implements NewsRepository {
   @override
   Future<({Article? hero, List<Article> feed, int totalPages})> getFeed({
     String? category,
+    String? searchQuery,
     int page = 1,
     int limit = 10,
     bool includeHero = true,
   }) async {
     final data = await remoteDatasource.getFeed(
       category: category,
+      searchQuery: searchQuery,
       page: page,
       limit: limit,
       includeHero: includeHero,

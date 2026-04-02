@@ -169,7 +169,7 @@ class _NewsAppBar extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          _IconBtn(Icons.search_rounded, onTap: () {}),
+          _IconBtn(Icons.search_rounded, onTap: () => context.push('/search')),
           const SizedBox(width: 8),
           BlocBuilder<AuthBloc, AuthState>(
             builder: (context, state) {
