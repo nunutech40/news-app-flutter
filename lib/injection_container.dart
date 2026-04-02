@@ -25,6 +25,7 @@ import 'package:news_app/features/auth/presentation/cubit/profile_cubit.dart';
 
 // News - Data
 import 'package:news_app/features/news/data/datasources/news_remote_datasource.dart';
+import 'package:news_app/features/news/data/datasources/news_local_datasource.dart';
 import 'package:news_app/features/news/data/repositories/news_repository_impl.dart';
 
 // News - Domain
@@ -32,6 +33,9 @@ import 'package:news_app/features/news/domain/repositories/news_repository.dart'
 import 'package:news_app/features/news/domain/usecases/get_article_usecase.dart';
 import 'package:news_app/features/news/domain/usecases/get_categories_usecase.dart';
 import 'package:news_app/features/news/domain/usecases/get_news_feed_usecase.dart';
+import 'package:news_app/features/news/domain/usecases/get_bookmarks_usecase.dart';
+import 'package:news_app/features/news/domain/usecases/toggle_bookmark_usecase.dart';
+import 'package:news_app/features/news/domain/usecases/check_bookmark_status_usecase.dart';
 
 // News - Presentation
 import 'package:news_app/features/news/presentation/cubit/category_cubit.dart';
@@ -39,6 +43,7 @@ import 'package:news_app/features/news/presentation/cubit/news_feed_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/trending_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/search_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/article_detail_cubit.dart';
+import 'package:news_app/features/news/presentation/cubit/bookmark_cubit.dart';
 
 // Global Event
 import 'package:news_app/core/bloc/global_alert/global_alert_bloc.dart';
@@ -164,21 +169,31 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<NewsRemoteDatasource>(
     () => NewsRemoteDatasourceImpl(apiClient: sl()),
   );
+  sl.registerLazySingleton<NewsLocalDatasource>(
+    () => NewsLocalDatasourceImpl(sharedPreferences: sl()),
+  );
   sl.registerLazySingleton<NewsRepository>(
-    () => NewsRepositoryImpl(remoteDatasource: sl()),
+    () => NewsRepositoryImpl(
+      remoteDatasource: sl(),
+      localDatasource: sl(),
+    ),
   );
 
   // ==================== News Use Cases ====================
   sl.registerLazySingleton(() => GetCategoriesUseCase(sl()));
   sl.registerLazySingleton(() => GetNewsFeedUseCase(sl()));
   sl.registerLazySingleton(() => GetArticleUseCase(sl()));
+  sl.registerLazySingleton(() => GetBookmarksUseCase(sl()));
+  sl.registerLazySingleton(() => ToggleBookmarkUseCase(sl()));
+  sl.registerLazySingleton(() => CheckBookmarkStatusUseCase(sl()));
 
   // Factory: Cubits must be fresh every time dashboard is opened
   sl.registerFactory(() => CategoryCubit(sl()));
   sl.registerFactory(() => NewsFeedCubit(sl()));
   sl.registerFactory(() => TrendingCubit(sl()));
   sl.registerFactory(() => SearchCubit(sl()));
-  sl.registerFactory(() => ArticleDetailCubit(sl()));
+  sl.registerFactory(() => BookmarkCubit(sl()));
+  sl.registerFactory(() => ArticleDetailCubit(sl(), sl(), sl()));
   sl.registerFactory(() => ProfileCubit(
     updateProfileUseCase: sl(),
     apiClient: sl(),

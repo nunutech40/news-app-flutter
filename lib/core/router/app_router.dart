@@ -10,6 +10,7 @@ import 'package:news_app/features/dashboard/presentation/pages/dashboard_page.da
 import 'package:news_app/features/news/presentation/cubit/trending_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/search_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/article_detail_cubit.dart';
+import 'package:news_app/features/news/presentation/cubit/bookmark_cubit.dart';
 import 'package:news_app/features/news/presentation/pages/news_feed_page.dart';
 import 'package:news_app/features/news/presentation/pages/news_search_page.dart';
 import 'package:news_app/features/news/presentation/pages/news_detail_page.dart';
@@ -91,6 +92,7 @@ class AppRouter {
             BlocProvider(create: (_) => sl<TrendingCubit>()..load()),
             BlocProvider(create: (_) => sl<NewsFeedCubit>()..load()),
             BlocProvider(create: (_) => sl<SearchCubit>()),
+            BlocProvider(create: (_) => sl<BookmarkCubit>()..loadBookmarks()),
           ],
           child: const DashboardPage(),
         ),

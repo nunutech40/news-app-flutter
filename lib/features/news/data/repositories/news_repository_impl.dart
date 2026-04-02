@@ -1,4 +1,5 @@
 import 'package:news_app/features/news/data/datasources/news_remote_datasource.dart';
+import 'package:news_app/features/news/data/datasources/news_local_datasource.dart';
 import 'package:news_app/features/news/data/models/news_models.dart';
 import 'package:news_app/features/news/domain/entities/article.dart';
 import 'package:news_app/features/news/domain/entities/category.dart';
@@ -6,8 +7,12 @@ import 'package:news_app/features/news/domain/repositories/news_repository.dart'
 
 class NewsRepositoryImpl implements NewsRepository {
   final NewsRemoteDatasource remoteDatasource;
+  final NewsLocalDatasource localDatasource;
 
-  NewsRepositoryImpl({required this.remoteDatasource});
+  NewsRepositoryImpl({
+    required this.remoteDatasource,
+    required this.localDatasource,
+  });
 
   @override
   Future<List<Category>> getCategories() => remoteDatasource.getCategories();
@@ -46,4 +51,13 @@ class NewsRepositoryImpl implements NewsRepository {
 
   @override
   Future<Article> getArticle(String slug) => remoteDatasource.getArticle(slug);
+
+  @override
+  Future<List<Article>> getBookmarks() => localDatasource.getBookmarks();
+
+  @override
+  Future<void> toggleBookmark(Article article) => localDatasource.toggleBookmark(article);
+
+  @override
+  Future<bool> isBookmarked(String slug) => localDatasource.isBookmarked(slug);
 }

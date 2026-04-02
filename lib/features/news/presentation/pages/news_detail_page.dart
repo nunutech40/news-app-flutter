@@ -78,6 +78,28 @@ class _NewsDetailPageState extends State<NewsDetailPage> {
                   expandedHeight: 300,
                   pinned: true,
                   backgroundColor: AppTheme.backgroundDark,
+                  actions: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: GestureDetector(
+                        onTap: () => context.read<ArticleDetailCubit>().toggleBookmark(),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.5),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            state.isBookmarked
+                                ? Icons.bookmark_rounded
+                                : Icons.bookmark_border_rounded,
+                            color: state.isBookmarked ? AppTheme.primaryColor : Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                   leading: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: GestureDetector(

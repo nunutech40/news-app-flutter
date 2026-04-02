@@ -53,4 +53,36 @@ class ArticleModel extends Article {
             ? DateTime.tryParse(json['published_at'] as String)
             : null,
       );
+
+  factory ArticleModel.fromEntity(Article entity) => ArticleModel(
+        id: entity.id,
+        categoryId: entity.categoryId,
+        categoryName: entity.categoryName,
+        authorName: entity.authorName,
+        title: entity.title,
+        slug: entity.slug,
+        description: entity.description,
+        content: entity.content,
+        imageUrl: entity.imageUrl,
+        thumbnailUrl: entity.thumbnailUrl,
+        readTimeMinutes: entity.readTimeMinutes,
+        status: entity.status,
+        publishedAt: entity.publishedAt,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'category_id': categoryId,
+        'category_name': categoryName,
+        'author_name': authorName,
+        'title': title,
+        'slug': slug,
+        'description': description,
+        'content': content,
+        'image_url': imageUrl,
+        'thumbnail_url': thumbnailUrl,
+        'read_time_minutes': readTimeMinutes,
+        'status': status,
+        'published_at': publishedAt?.toIso8601String(),
+      };
 }

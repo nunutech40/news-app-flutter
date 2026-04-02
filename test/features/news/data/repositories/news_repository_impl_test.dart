@@ -28,7 +28,10 @@ import 'package:news_app/features/news/domain/entities/category.dart';
 //   d. Error Path: Exception dari datasource naik tanpa ditangkap repository.
 // =============================================================================
 
+import 'package:news_app/features/news/data/datasources/news_local_datasource.dart';
+
 class MockNewsRemoteDatasource extends Mock implements NewsRemoteDatasource {}
+class MockNewsLocalDatasource extends Mock implements NewsLocalDatasource {}
 
 // Fake untuk fallback Mocktail ketika pakai any() dengan tipe custom
 class FakeCategoryModel extends Fake implements CategoryModel {}
@@ -37,6 +40,7 @@ class FakeArticleModel extends Fake implements ArticleModel {}
 void main() {
   late NewsRepositoryImpl repository;
   late MockNewsRemoteDatasource mockDatasource;
+  late MockNewsLocalDatasource mockLocalDatasource;
 
   setUpAll(() {
     registerFallbackValue(FakeCategoryModel());
@@ -45,7 +49,11 @@ void main() {
 
   setUp(() {
     mockDatasource = MockNewsRemoteDatasource();
-    repository = NewsRepositoryImpl(remoteDatasource: mockDatasource);
+    mockLocalDatasource = MockNewsLocalDatasource();
+    repository = NewsRepositoryImpl(
+      remoteDatasource: mockDatasource,
+      localDatasource: mockLocalDatasource,
+    );
   });
 
   // ---------------------------------------------------------------------------

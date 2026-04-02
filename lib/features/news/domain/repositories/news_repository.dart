@@ -13,4 +13,9 @@ abstract class NewsRepository {
   });
 
   Future<Article> getArticle(String slug);
+
+  // Local Bookmarks
+  Future<List<Article>> getBookmarks();
+  Future<void> toggleBookmark(Article article);
+  Future<bool> isBookmarked(String slug);
 }
