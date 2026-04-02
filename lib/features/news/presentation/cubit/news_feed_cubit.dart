@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app/features/news/domain/entities/article.dart';
-import 'package:news_app/features/news/domain/repositories/news_repository.dart';
+import 'package:news_app/features/news/domain/usecases/get_news_feed_usecase.dart';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 abstract class NewsFeedState extends Equatable {
@@ -59,20 +59,19 @@ class NewsFeedError extends NewsFeedState {
 
 // ── Cubit ─────────────────────────────────────────────────────────────────────
 class NewsFeedCubit extends Cubit<NewsFeedState> {
-  final NewsRepository _repo;
+  final GetNewsFeedUseCase _useCase;
 
-  NewsFeedCubit(this._repo) : super(NewsFeedInitial());
+  NewsFeedCubit(this._useCase) : super(NewsFeedInitial());
 
-  /// Initial load or category switch — always resets to page 1
   Future<void> load({String? category}) async {
     emit(NewsFeedLoading());
     try {
-      final result = await _repo.getFeed(
+      final result = await _useCase(GetNewsFeedParams(
         category: category,
         page: 1,
         limit: 10,
         includeHero: true,
-      );
+      ));
       emit(NewsFeedLoaded(
         hero: result.hero,
         feed: result.feed,
@@ -92,12 +91,12 @@ class NewsFeedCubit extends Cubit<NewsFeedState> {
     emit(current.copyWith(isLoadingMore: true));
     try {
       final nextPage = current.currentPage + 1;
-      final result = await _repo.getFeed(
+      final result = await _useCase(GetNewsFeedParams(
         category: category,
         page: nextPage,
         limit: 10,
-        includeHero: false, // no hero on subsequent pages
-      );
+        includeHero: false,
+      ));
       emit(current.copyWith(
         feed: [...current.feed, ...result.feed],
         currentPage: nextPage,

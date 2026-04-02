@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app/features/news/domain/entities/article.dart';
-import 'package:news_app/features/news/domain/repositories/news_repository.dart';
+import 'package:news_app/features/news/domain/usecases/get_news_feed_usecase.dart';
 
 abstract class TrendingState extends Equatable {
   const TrendingState();
@@ -27,21 +27,18 @@ class TrendingError extends TrendingState {
 }
 
 class TrendingCubit extends Cubit<TrendingState> {
-  final NewsRepository _repo;
+  final GetNewsFeedUseCase _useCase;
 
-  TrendingCubit(this._repo) : super(TrendingLoading());
+  TrendingCubit(this._useCase) : super(TrendingLoading());
 
   Future<void> load() async {
     emit(TrendingLoading());
     try {
-      // Kita tembak API news, tapi sengaja kita set:
-      // - includeHero: false
-      // - category: technology (contoh untuk trending)
-      final result = await _repo.getFeed(
+      final result = await _useCase(const GetNewsFeedParams(
         category: 'technology',
         limit: 5,
         includeHero: false,
-      );
+      ));
       emit(TrendingLoaded(articles: result.feed));
     } catch (e) {
       emit(TrendingError(e.toString()));

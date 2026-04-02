@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app/features/news/domain/entities/category.dart';
-import 'package:news_app/features/news/domain/repositories/news_repository.dart';
+import 'package:news_app/features/news/domain/usecases/get_categories_usecase.dart';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 abstract class CategoryState extends Equatable {
@@ -31,14 +31,14 @@ class CategoryError extends CategoryState {
 
 // ── Cubit ─────────────────────────────────────────────────────────────────────
 class CategoryCubit extends Cubit<CategoryState> {
-  final NewsRepository _repo;
+  final GetCategoriesUseCase _useCase;
 
-  CategoryCubit(this._repo) : super(CategoryInitial());
+  CategoryCubit(this._useCase) : super(CategoryInitial());
 
   Future<void> load() async {
     emit(CategoryLoading());
     try {
-      final cats = await _repo.getCategories();
+      final cats = await _useCase();
       emit(CategoryLoaded(categories: cats));
     } catch (e) {
       emit(CategoryError(e.toString()));

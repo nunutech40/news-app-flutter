@@ -29,6 +29,9 @@ import 'package:news_app/features/news/data/repositories/news_repository_impl.da
 
 // News - Domain
 import 'package:news_app/features/news/domain/repositories/news_repository.dart';
+import 'package:news_app/features/news/domain/usecases/get_article_usecase.dart';
+import 'package:news_app/features/news/domain/usecases/get_categories_usecase.dart';
+import 'package:news_app/features/news/domain/usecases/get_news_feed_usecase.dart';
 
 // News - Presentation
 import 'package:news_app/features/news/presentation/cubit/category_cubit.dart';
@@ -162,6 +165,11 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton<NewsRepository>(
     () => NewsRepositoryImpl(remoteDatasource: sl()),
   );
+
+  // ==================== News Use Cases ====================
+  sl.registerLazySingleton(() => GetCategoriesUseCase(sl()));
+  sl.registerLazySingleton(() => GetNewsFeedUseCase(sl()));
+  sl.registerLazySingleton(() => GetArticleUseCase(sl()));
 
   // Factory: Cubits must be fresh every time dashboard is opened
   sl.registerFactory(() => CategoryCubit(sl()));
