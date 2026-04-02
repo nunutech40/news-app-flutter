@@ -61,20 +61,8 @@ class _NewsSearchPageState extends State<NewsSearchPage> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () => context.pop(),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppTheme.surfaceCard,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.arrow_back_rounded,
-                          color: AppTheme.textPrimary, size: 20),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
+                  // Removed back button since this is a root tab
+
                   Expanded(
                     child: Container(
                       height: 44,

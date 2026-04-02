@@ -168,36 +168,7 @@ class _NewsAppBar extends StatelessWidget {
               ],
             ),
           ),
-          const Spacer(),
-          _IconBtn(Icons.search_rounded, onTap: () => context.push('/search')),
-          const SizedBox(width: 8),
-          BlocBuilder<AuthBloc, AuthState>(
-            builder: (context, state) {
-              final user = state.user;
-              final avatar = user?.avatarUrl;
-              return GestureDetector(
-                onTap: () => context.push('/profile'),
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceCard,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                    image: (avatar != null && avatar.isNotEmpty)
-                        ? DecorationImage(
-                            image: CachedNetworkImageProvider(avatar),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: (avatar == null || avatar.isEmpty)
-                      ? const Icon(Icons.person_outline_rounded,
-                          color: AppTheme.textSecondary, size: 20)
-                      : null,
-                ),
-              );
-            },
-          ),
+          // No actions needed anymore since they are in bottom navigation
         ],
       ),
     );

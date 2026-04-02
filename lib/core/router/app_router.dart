@@ -6,6 +6,7 @@ import 'package:news_app/features/auth/presentation/pages/login_page.dart';
 import 'package:news_app/features/auth/presentation/pages/register_page.dart';
 import 'package:news_app/features/news/presentation/cubit/category_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/news_feed_cubit.dart';
+import 'package:news_app/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:news_app/features/news/presentation/cubit/trending_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/search_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/article_detail_cubit.dart';
@@ -89,21 +90,9 @@ class AppRouter {
             BlocProvider(create: (_) => sl<CategoryCubit>()..load()),
             BlocProvider(create: (_) => sl<TrendingCubit>()..load()),
             BlocProvider(create: (_) => sl<NewsFeedCubit>()..load()),
+            BlocProvider(create: (_) => sl<SearchCubit>()),
           ],
-          child: const NewsFeedPage(),
-        ),
-      ),
-      GoRoute(
-        path: '/profile',
-        name: 'profile',
-        builder: (context, state) => const ProfilePage(),
-      ),
-      GoRoute(
-        path: '/search',
-        name: 'search',
-        builder: (context, state) => BlocProvider(
-          create: (_) => sl<SearchCubit>(),
-          child: const NewsSearchPage(),
+          child: const DashboardPage(),
         ),
       ),
       GoRoute(
