@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:news_app/features/auth/presentation/widgets/edit_profile_bottom_sheet.dart';
 import 'package:news_app/core/theme/app_theme.dart';
+import 'package:news_app/core/utils/date_helper.dart';
 import 'package:news_app/features/news/domain/entities/article.dart';
 import 'package:news_app/features/news/domain/entities/category.dart';
 import 'package:news_app/features/news/presentation/cubit/category_cubit.dart';
@@ -648,7 +649,7 @@ class _ListCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    article.timeAgo,
+                    DateHelper.timeAgo(article.publishedAt),
                     style: const TextStyle(
                       color: AppTheme.textMuted,
                       fontSize: 12,
