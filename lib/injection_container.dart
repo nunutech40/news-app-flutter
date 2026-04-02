@@ -38,6 +38,7 @@ import 'package:news_app/features/news/presentation/cubit/category_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/news_feed_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/trending_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/search_cubit.dart';
+import 'package:news_app/features/news/presentation/cubit/article_detail_cubit.dart';
 
 // Global Event
 import 'package:news_app/core/bloc/global_alert/global_alert_bloc.dart';
@@ -177,6 +178,7 @@ Future<void> initDependencies() async {
   sl.registerFactory(() => NewsFeedCubit(sl()));
   sl.registerFactory(() => TrendingCubit(sl()));
   sl.registerFactory(() => SearchCubit(sl()));
+  sl.registerFactory(() => ArticleDetailCubit(sl()));
   sl.registerFactory(() => ProfileCubit(
     updateProfileUseCase: sl(),
     apiClient: sl(),

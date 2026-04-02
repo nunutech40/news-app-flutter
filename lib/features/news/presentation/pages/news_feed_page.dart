@@ -434,7 +434,7 @@ class _HeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {/* navigate to detail */},
+      onTap: () => context.push('/article/${article.slug}'),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: ClipRRect(
@@ -626,7 +626,7 @@ class _ListCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {/* navigate to detail */},
+      onTap: () => context.push('/article/${article.slug}'),
       child: Container(
         color: Colors.transparent, // Ensures the whole area is clickable
         child: Row(
