@@ -39,6 +39,8 @@ class TrendingCubit extends Cubit<TrendingState> {
         limit: 5,
         includeHero: false,
       ));
+      await Future.delayed(const Duration(milliseconds: 1000));
+      if (isClosed) return;
       emit(TrendingLoaded(articles: result.feed));
     } catch (e) {
       emit(TrendingError(e.toString()));

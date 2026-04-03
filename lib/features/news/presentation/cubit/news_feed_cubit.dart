@@ -73,6 +73,8 @@ class NewsFeedCubit extends Cubit<NewsFeedState> {
         limit: 10,
         includeHero: true,
       ));
+      await Future.delayed(const Duration(milliseconds: 1600));
+      if (isClosed) return;
       emit(NewsFeedLoaded(
         hero: result.hero,
         feed: result.feed,

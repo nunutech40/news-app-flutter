@@ -39,6 +39,8 @@ class CategoryCubit extends Cubit<CategoryState> {
     emit(CategoryLoading());
     try {
       final cats = await _useCase();
+      await Future.delayed(const Duration(milliseconds: 400));
+      if (isClosed) return;
       emit(CategoryLoaded(categories: cats));
     } catch (e) {
       emit(CategoryError(e.toString()));
