@@ -156,7 +156,7 @@ Presentation -> Domain <- Data
 
 | Library | Version | Justification | Alternatif yang Dipertimbangkan |
 |---------|---------|---------------|-------------------------------|
-| **go_router** | ^14.8.1 | Declarative routing dengan auth-aware redirect. Support `refreshListenable` untuk auto-redirect saat auth state berubah. Deep linking ready. | `auto_route` — code gen overhead. Navigator 2.0 raw — terlalu verbose. |
+| **go_router** | ^14.8.1 | Declarative routing dengan _auth-aware redirect_, _deep linking_, dan _nested navigation_ (via ShellRoute). Sangat kuat untuk membatasi akses URL berdasarkan _state_ BLoC via `refreshListenable`. | **Default Navigation (Navigator 1.0 / `push`/`pop`)**: Walaupun sederhana tanpa package luar, Navigator 1.0 sangat rapuh dan imperatif; sulit melacak _stack_ rute, tidak mendukung URL/Deep Linking otomatis, dan membuat kode _redirection auth_ berantakan karena disisipkan acak ke dalam Builder UI. <br><br>**Navigator 2.0 (Raw)**: Mendukung segala fitur _Declarative_ namun sintaks dan strukturnya (RouterDelegate/RouteInformationParser) ribet luar biasa bertele-tele. <br><br>**`auto_route`**: Kuat namun mengandalkan Code Generation (memperlambat waktu build Flutter). |
 
 #### UI
 
