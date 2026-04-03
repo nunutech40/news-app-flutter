@@ -995,11 +995,67 @@ App Start
     |                                   |
     |                            (logout)
     |                                   |
+    |                                   |
     +-----------------------------------v
                                     /login
 ```
 
----
+### 13.4 ShellRoute (Nested Navigation for Three Views)
+
+Aplikasi memiliki fitur navigasi **Stateful Nested Navigation** menggunakan struktur canggih `StatefulShellRoute` dari GoRouter, yang memecah satu halaman rute raksasa (Dashboard) ke dalam "Tiga Cabang / _Three Views_" yang mandiri.
+
+Pola ini menjamin _State Preservation_ (scroll posisi, teks input, dan bloc state) dipertahankan utuh meski user berpindah-pindah tab. Flow navigasinya adalah sebagai berikut:
+
+```mermaid
+graph TD
+    Root["Root Layout (MaterialApp.router)"]
+    
+    subgraph GoRouter Config
+        Dashboard["StatefulShellRoute: '/dashboard'"]
+    end
+    
+    subgraph UI Scaffold (DashboardPage)
+        AppBar["Global Top AppBar"]
+        ContentArea["Shell Content Area (Offstage Router)"]
+        BottomNav["BottomNavigationBar (3 Tabs)"]
+        
+        Dashboard --> AppBar
+        Dashboard --> ContentArea
+        Dashboard --> BottomNav
+    end
+    
+    subgraph Branch 1 (Tab 0)
+        RouterTab0["StatefulShellBranch 1"]
+        NewsPage["NewsFeedPage"]
+        RouterTab0 --> NewsPage
+    end
+
+    subgraph Branch 2 (Tab 1)
+        RouterTab1["StatefulShellBranch 2"]
+        ExplorePage["ExplorePage"]
+        RouterTab1 --> ExplorePage
+    end
+
+    subgraph Branch 3 (Tab 2)
+        RouterTab2["StatefulShellBranch 3"]
+        BookmarkPage["BookmarkPage"]
+        RouterTab2 --> BookmarkPage
+    end
+
+    %% Internal Router Logic
+    ContentArea -.->|Index 0| RouterTab0
+    ContentArea -.->|Index 1| RouterTab1
+    ContentArea -.->|Index 2| RouterTab2
+
+    %% Sub-Routing (Child Routes)
+    DeepLinkNews["ArticleDetailPage ('/article/:slug')"]
+    NewsPage -- "context.push()" --> DeepLinkNews
+    ExplorePage -- "context.push()" --> DeepLinkNews
+    BookmarkPage -- "context.push()" --> DeepLinkNews
+    
+    classDef branch fill:#f9f5ff,stroke:#8a2be2,stroke-width:2px;
+    class RouterTab0,RouterTab1,RouterTab2 branch;
+```
 
 ## 14. Dependency Injection
 
