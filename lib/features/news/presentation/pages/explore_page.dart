@@ -95,6 +95,21 @@ class _ExplorePageState extends State<ExplorePage> {
     required FetchStatus status,
     required List<Article> articles,
   }) {
+    if (status == FetchStatus.initial || status == FetchStatus.loading) {
+      // Tampilkan sekedar indikator loading tanpa label Title
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 40),
+        child: Center(
+          child: CircularProgressIndicator(color: AppTheme.primaryColor),
+        ),
+      );
+    }
+
+    if (status == FetchStatus.error || articles.isEmpty) {
+      // Jika eror atau data kosong, sembunyikan section seutuhnya
+      return const SizedBox.shrink();
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
@@ -113,38 +128,14 @@ class _ExplorePageState extends State<ExplorePage> {
           ),
           SizedBox(
             height: 180,
-            child: _buildSectionContent(status, articles),
+            child: _buildSectionContent(articles),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionContent(FetchStatus status, List<Article> articles) {
-    if (status == FetchStatus.initial || status == FetchStatus.loading) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppTheme.primaryColor),
-      );
-    }
-
-    if (status == FetchStatus.error) {
-      return const Center(
-        child: Text(
-          'Gagal memuat.',
-          style: TextStyle(color: AppTheme.textMuted),
-        ),
-      );
-    }
-
-    if (articles.isEmpty) {
-      return const Center(
-        child: Text(
-          'Belum ada berita.',
-          style: TextStyle(color: AppTheme.textMuted),
-        ),
-      );
-    }
-
+  Widget _buildSectionContent(List<Article> articles) {
     return ListView.separated(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
