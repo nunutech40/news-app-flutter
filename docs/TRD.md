@@ -669,7 +669,21 @@ UI --(Event)--> BLoC --(UseCase)--> Repository
                   +--(State)--> UI rebuilds
 ```
 
-### 9.2 Auth BLoC - Global Singleton
+### 9.2 BLoC vs Cubit Guidelines
+
+Dalam proyek ini, kita mengkombinasikan penggunaan **BLoC** (dengan Event) dan **Cubit** (tanpa Event) secara spesifik tergantung pada kompleksitas logika.
+
+**Kapan menggunakan BLoC?**
+Kapanpun dibutuhkan validasi terpusat (debounce, throttling, switchMap, dll), _multiple inputs_ yang saling memengaruhi, atau adanya _side-effects_ reaktif.
+> **Contoh:** `AuthBloc` menggunakan BLoC karena alur _check session_, _login_, _register_, dan _logout_ saling berhubungan, memerlukan transisi via rentetan Event yang rumit, dan dapat dipanggil dari *splash screen* hingga *interceptors*. `GlobalAlertBloc` menggunakan BLoC karena alert muncul berututan dan perlu antrean antarmuka pengguna via *event mapping*.
+
+**Kapan menggunakan Cubit?**
+Kapanpun cukup menggunakan pemanggilan fungsi sederhana yang linier ke API atau UseCase. Cubit secara drastis mengurangi boilerplate _Event Class_.
+> **Contoh:** `CategoryCubit`, `NewsFeedCubit`, `TrendingCubit`, `ExploreCubit`, `BookmarkCubit`, dan `ArticleDetailCubit`. Fungsi ini hanyalah `load()`, `refresh()`, atau `toggleBookmark()`. Mereka tidak memerlukan pemrosesan Event reaktif (_TransformEvents_), maka dari itu implementasinya direduksi menjadi Cubit agar komponen menjadi sangat tipis.
+
+**Aturan Emas:** *Mulailah dengan Cubit secara default. Promosikan ia menjadi BLoC hanya apabila state logic menyertakan rute alur reaktif/event stream processing tingkat lanjut.*
+
+### 9.3 Auth BLoC - Global Singleton
 
 Auth BLoC di-provide di **level `MaterialApp`** karena digunakan di:
 - `GoRouter` redirect, navigasi otomatis berdasarkan auth state
@@ -685,7 +699,7 @@ BlocProvider<AuthBloc>.value(
 )
 ```
 
-### 9.3 Auth State Machine
+### 9.4 Auth State Machine
 
 ```
                      +--------+
@@ -708,7 +722,7 @@ BlocProvider<AuthBloc>.value(
    +----------+ +------+   +---------+
 ```
 
-### 9.4 Events and State
+### 9.5 Events and State
 
 **Events:**
 
@@ -728,9 +742,9 @@ BlocProvider<AuthBloc>.value(
 | `user` | `User?` | Current user data |
 | `errorMessage` | `String?` | Error message for UI display |
 
-### 9.5 Future Feature BLoCs
+### 9.6 Future Feature BLoCs/Cubits
 
-Feature-specific BLoCs (e.g., `NewsBloc`) akan di-provide di route level, bukan global:
+Feature-specific BLoCs/Cubits (e.g., `ExploreCubit`) akan di-provide di route level, bukan global:
 
 ```dart
 // Global for cross-cutting state
@@ -1241,5 +1255,19 @@ graph TD
 3. **Pekerja Form (Local)**: `ProfileCubit` dan `EditProfileBottomSheet` di-inisialisasi secara independen dan sementara (ephemeral). Bertugas mengatur life-cycle seperti proses upload gambar, loading spinner, handle validasi form.
 4. **Jembatan Sinkronisasi**: Begitu `ProfileCubit` sukses mengirim data ke server, dia bertindak menjembatani perubahan tersebut ke *Global State* dengan perintah:
 `context.read<AuthBloc>().add(AuthUserUpdated(state.updatedUser))`
-5. **Reaktivitas UI Secara Transparan**: Semua layer pembaca (`ProfilePage` & `NewsFeedPage` app bar) langung secara massal *auto-render* UI mereka sesaat setelah mereka mendengar bahwa `AuthBloc` mem-broadcast update tersebut.
 6. **Zero Memory Footprint**: Form `ProfileCubit` dihancurkan (garbage collected) setelah lembar sheet ditutup.
+
+---
+
+## 18. Feature Modules
+
+Dalam upaya menjaga TRD ini agar tidak menjadi terlalu besar (Monolithic), implementasi spesifik dari berbagai modul diletakkan ke dalam panduan (_markdown_) sendiri di dalam folder `docs/features/`. 
+
+Dokumen induk (TRD) ini bertindak sebagai Blueprint Global Arsitektur & Aturan Main, sementara fungsi fitur-fiturnya diurus dalam file spesifik berikut:
+
+| Feature Name | Document Resource | Description |
+|--------------|-------------------|-------------|
+| **Auth** | [features/auth.md](features/auth.md) | Otentikasi, Splash Screen, Storage Token. |
+| **News & Explore** | [features/news_explore.md](features/news_explore.md) | Dashboard, Explore Page, API Feed aggregator. |
+| **Bookmarks** | [features/bookmarks.md](features/bookmarks.md) | Layar Bookmark, _Optimistic updating_. |
+| **Search** | [features/search.md](features/search.md) | Pencarian dengan Pagination & Debounce. |
