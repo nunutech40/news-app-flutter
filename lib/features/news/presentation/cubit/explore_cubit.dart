@@ -72,8 +72,9 @@ class ExploreCubit extends Cubit<ExploreState> {
       limit: 5,
       includeHero: false,
     )).then((result) {
-      // Simulasi delay tambahan agar nampak transisi UI (Optional tp biar visualnya jelas)
-      Future.delayed(const Duration(milliseconds: 600), () {
+      // Simulasi delay tambahan agar nampak transisi UI
+      // Ubah dari 600ms jadi 1500ms (uncul ke-2)
+      Future.delayed(const Duration(milliseconds: 1500), () {
         if (isClosed) return;
         emit(state.copyWith(
           techStatus: FetchStatus.loaded,
@@ -90,7 +91,8 @@ class ExploreCubit extends Cubit<ExploreState> {
       limit: 5,
       includeHero: false,
     )).then((result) {
-      Future.delayed(const Duration(milliseconds: 1500), () {
+      // Ubah jadi 2500ms (muncul Paling Terakhir)
+      Future.delayed(const Duration(milliseconds: 2500), () {
         if (isClosed) return;
         emit(state.copyWith(
           businessStatus: FetchStatus.loaded,
@@ -107,7 +109,8 @@ class ExploreCubit extends Cubit<ExploreState> {
       limit: 5,
       includeHero: false,
     )).then((result) {
-      Future.delayed(const Duration(milliseconds: 2400), () {
+      // Ubah jadi 500ms (muncul Paling Awal)
+      Future.delayed(const Duration(milliseconds: 500), () {
         if (isClosed) return;
         emit(state.copyWith(
           sportsStatus: FetchStatus.loaded,
