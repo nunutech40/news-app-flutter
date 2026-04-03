@@ -82,8 +82,9 @@ class _ExplorePageState extends State<ExplorePage> {
               ),
               const SliverPadding(padding: EdgeInsets.only(bottom: 40)),
             ],
-          );
-        },
+          ),
+        );
+      },
       ),
     );
   }
