@@ -92,6 +92,7 @@ class AppRouter {
             BlocProvider(create: (_) => sl<TrendingCubit>()..load()),
             BlocProvider(create: (_) => sl<NewsFeedCubit>()..load()),
             BlocProvider(create: (_) => sl<SearchCubit>()),
+            BlocProvider(create: (_) => sl<ExploreCubit>()),
             BlocProvider(create: (_) => sl<BookmarkCubit>()..loadBookmarks()),
           ],
           child: const DashboardPage(),

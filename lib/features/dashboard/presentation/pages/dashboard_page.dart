@@ -5,6 +5,7 @@ import 'package:news_app/features/news/presentation/cubit/bookmark_cubit.dart';
 
 // Pages
 import 'package:news_app/features/news/presentation/pages/news_feed_page.dart';
+import 'package:news_app/features/news/presentation/pages/explore_page.dart';
 import 'package:news_app/features/news/presentation/pages/news_search_page.dart';
 import 'package:news_app/features/news/presentation/pages/bookmark_page.dart';
 import 'package:news_app/features/auth/presentation/pages/profile_page.dart';
@@ -21,6 +22,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   final List<Widget> _pages = const [
     NewsFeedPage(),
+    ExplorePage(),
     NewsSearchPage(),
     BookmarkPage(),
     ProfilePage(),
@@ -49,7 +51,7 @@ class _DashboardPageState extends State<DashboardPage> {
             setState(() {
               _currentIndex = index;
             });
-            if (index == 2) {
+            if (index == 3) {
               context.read<BookmarkCubit>().loadBookmarks();
             }
           },
@@ -76,6 +78,13 @@ class _DashboardPageState extends State<DashboardPage> {
                 child: Icon(Icons.home_rounded),
               ),
               label: 'Berita',
+            ),
+            BottomNavigationBarItem(
+              icon: Padding(
+                padding: EdgeInsets.only(bottom: 4),
+                child: Icon(Icons.explore_rounded),
+              ),
+              label: 'Jelajah',
             ),
             BottomNavigationBarItem(
               icon: Padding(

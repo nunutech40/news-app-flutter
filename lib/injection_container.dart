@@ -44,6 +44,7 @@ import 'package:news_app/features/news/presentation/cubit/trending_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/search_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/article_detail_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/bookmark_cubit.dart';
+import 'package:news_app/features/news/presentation/cubit/explore_cubit.dart';
 
 // Global Event
 import 'package:news_app/core/bloc/global_alert/global_alert_bloc.dart';
@@ -189,6 +190,7 @@ Future<void> initDependencies() async {
 
   // Factory: Cubits must be fresh every time dashboard is opened
   sl.registerFactory(() => CategoryCubit(sl()));
+  sl.registerFactory(() => ExploreCubit(sl()));
   sl.registerFactory(() => NewsFeedCubit(sl()));
   sl.registerFactory(() => TrendingCubit(sl()));
   sl.registerFactory(() => SearchCubit(sl()));
