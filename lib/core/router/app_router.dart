@@ -11,6 +11,7 @@ import 'package:news_app/features/news/presentation/cubit/trending_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/search_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/article_detail_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/bookmark_cubit.dart';
+import 'package:news_app/features/news/presentation/cubit/explore_cubit.dart';
 import 'package:news_app/features/news/presentation/pages/news_feed_page.dart';
 import 'package:news_app/features/news/presentation/pages/news_search_page.dart';
 import 'package:news_app/features/news/presentation/pages/news_detail_page.dart';
