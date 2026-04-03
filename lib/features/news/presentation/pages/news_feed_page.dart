@@ -97,7 +97,16 @@ class _NewsFeedViewState extends State<_NewsFeedView> {
         // ── Trending (Independent API Call) ────────────
         BlocBuilder<TrendingCubit, TrendingState>(
           builder: (context, state) {
-            if (state is TrendingLoading) return const _TrendingShimmer();
+            if (state is TrendingLoading) {
+              return const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppTheme.primaryColor),
+                  ),
+                ),
+              );
+            }
             if (state is TrendingLoaded) return _TrendingSection(articles: state.articles);
             return const SliverToBoxAdapter(child: SizedBox.shrink());
           },
@@ -106,7 +115,16 @@ class _NewsFeedViewState extends State<_NewsFeedView> {
         // ── Feed Content (Latest News vertical) ─────────
         BlocBuilder<NewsFeedCubit, NewsFeedState>(
           builder: (context, state) {
-            if (state is NewsFeedLoading) return const _FeedShimmer();
+            if (state is NewsFeedLoading) {
+              return const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppTheme.primaryColor),
+                  ),
+                ),
+              );
+            }
             if (state is NewsFeedLoaded) {
               return _FeedContent(state: state);
             }
