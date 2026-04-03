@@ -1010,11 +1010,11 @@ Pola ini menjamin _State Preservation_ (scroll posisi, teks input, dan bloc stat
 graph TD
     Root["Root Layout (MaterialApp.router)"]
     
-    subgraph GoRouter Config
+    subgraph GoRouter["GoRouter Config"]
         Dashboard["StatefulShellRoute: '/dashboard'"]
     end
     
-    subgraph UI Scaffold (DashboardPage)
+    subgraph Scaffold["UI Scaffold (DashboardPage)"]
         AppBar["Global Top AppBar"]
         ContentArea["Shell Content Area (Offstage Router)"]
         BottomNav["BottomNavigationBar (3 Tabs)"]
@@ -1024,19 +1024,19 @@ graph TD
         Dashboard --> BottomNav
     end
     
-    subgraph Branch 1 (Tab 0)
+    subgraph Branch1["Branch 1 (Tab 0)"]
         RouterTab0["StatefulShellBranch 1"]
         NewsPage["NewsFeedPage"]
         RouterTab0 --> NewsPage
     end
 
-    subgraph Branch 2 (Tab 1)
+    subgraph Branch2["Branch 2 (Tab 1)"]
         RouterTab1["StatefulShellBranch 2"]
         ExplorePage["ExplorePage"]
         RouterTab1 --> ExplorePage
     end
 
-    subgraph Branch 3 (Tab 2)
+    subgraph Branch3["Branch 3 (Tab 2)"]
         RouterTab2["StatefulShellBranch 3"]
         BookmarkPage["BookmarkPage"]
         RouterTab2 --> BookmarkPage
