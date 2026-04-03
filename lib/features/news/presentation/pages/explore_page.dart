@@ -47,9 +47,15 @@ class _ExplorePageState extends State<ExplorePage> {
       ),
       body: BlocBuilder<ExploreCubit, ExploreState>(
         builder: (context, state) {
-          return CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
+          return RefreshIndicator(
+            color: AppTheme.primaryColor,
+            onRefresh: () async {
+              context.read<ExploreCubit>().loadAllSections();
+              await Future.delayed(const Duration(seconds: 1)); // UX muter
+            },
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(), // Scrollable dipaksa agar tetap bisa ditarik
+              slivers: [
               SliverToBoxAdapter(
                 child: _buildSection(
                   context,

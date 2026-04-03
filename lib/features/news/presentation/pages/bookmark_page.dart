@@ -49,18 +49,36 @@ class BookmarkPage extends StatelessWidget {
 
           if (state is BookmarkLoaded) {
             if (state.articles.isEmpty) {
-              return const Center(
-                child: EmptyView(
-                  icon: Icons.bookmark_border_rounded,
-                  title: 'Koleksi Kosong',
-                  message: 'Daftar berita yang Anda simpan akan muncul di sini.',
+              return RefreshIndicator(
+                color: AppTheme.primaryColor,
+                onRefresh: () async {
+                  context.read<BookmarkCubit>().loadBookmarks();
+                  // Efek tunggu sebentar biar animasi muter kelihatan
+                  await Future.delayed(const Duration(milliseconds: 500));
+                },
+                child: LayoutBuilder(
+                  builder: (context, constraints) => SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Container(
+                      height: constraints.maxHeight,
+                      alignment: Alignment.center,
+                      child: const EmptyView(
+                        icon: Icons.bookmark_border_rounded,
+                        title: 'Koleksi Kosong',
+                        message: 'Daftar berita yang Anda simpan akan muncul di sini.',
+                      ),
+                    ),
+                  ),
                 ),
               );
             }
 
             return RefreshIndicator(
               color: AppTheme.primaryColor,
-              onRefresh: () => context.read<BookmarkCubit>().loadBookmarks(),
+              onRefresh: () async {
+                context.read<BookmarkCubit>().loadBookmarks();
+                await Future.delayed(const Duration(milliseconds: 500));
+              },
               child: ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
