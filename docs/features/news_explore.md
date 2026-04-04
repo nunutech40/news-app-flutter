@@ -97,7 +97,27 @@ sequenceDiagram
 
 ---
 
-## 3. Offline-First & Caching Strategy
+## 3. Strategi Siklus Hidup (Initialization & Lifecycle)
+
+Pertanyaan penting dalam arsitektur berskala besar: *"Di mana Cubit dan UseCase ini diciptakan, dan mengapa ditaruh di sana?"*
+NewsApp menerapkan manajemen memori yang ketat dengan kombinasi GetIt (Pabrik) dan BlocProvider (Siklus Hidup).
+
+#### A. Warga Abadi: `UseCases` (GetNewsFeedUseCase, dkk)
+- **Registrasi**: Didaftarkan sebagai **`registerLazySingleton`** di `injection_container.dart`.
+- **Alasan**: `UseCase` itu wujudnya murni hanya kumpulan Fungsi/Rumus Bisnis tanpa wujud UI. Karena ia bersih dari variabel *State*, tidak masuk akal memboroskan RAM untuk mencetak `UseCase` berulang-ulang setiap kali buka layar. Cukup 1 untuk seluruh aplikasi.
+
+#### B. Warga Sementara: Sepasukan `Cubits` (NewsFeedCubit, ExploreCubit, dkk)
+- **Registrasi Pabrik**: Didaftarkan sebagai **`registerFactory`** di `injection_container.dart`. Ini berarti bentuknya hanya cetak biru. GetIt tidak akan menaruhnya di Memori Utama.
+- **Inisialisasi Fisik (Lahir)**: Berpasukan Cubit ini (bersama dengan *Trending, Category,* dan *Bookmark*) ditiupkan roh fisiknya serentak di dalam **`app_router.dart`** yang membungkus `/dashboard` menggunakan `MultiBlocProvider`.
+- **Alasan Mengapa di Router Dashboard?**
+  Berbalik dengan `AuthBloc` yang hidup abadi di atas, kumpulan Cubit Berita ini HARUS bersifat Fana (Terbatas). Kenapa?
+  1. Mereka memuat **Data Rahasia Sesi (State UI)** seperti daftar artikel, halaman 5, dan cache beranda.
+  2. Saat User Log Out (kembali ke `/login`), seluruh Rute `/dashboard` akan DITEBAS dari tumpukan router.
+  3. Konsekuensi luar biasanya: Semua tumpukan Cubit ini akan ikut gugur, dan _Garbage Collector_ HP akan menguras RAM hingga kosong bersih. Tidak ada lagi data lama yang tersisa jika sewaktu-waktu ada User baru _Login_!
+
+---
+
+## 4. Offline-First & Caching Strategy
 
 Dokumen ini menjelaskan strategi *Graceful Degradation* untuk fitur News Feed sehingga aplikasi tetap bisa menampilkan data dan tidak kosong melompong saat perangkat pengguna offline atau jaringan bermasalah.
 
