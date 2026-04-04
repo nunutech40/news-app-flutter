@@ -101,33 +101,27 @@ Berikut adalah algoritma _Flowchart_ bagaimana Repository menjembatani kegagalan
 
 ```mermaid
 flowchart TD
-    Start([AuthBloc.getProfile]) --> Repo[AuthRepositoryImpl.getProfile]
+    Start([Start: AuthRepository.getProfile]) --> TryRemote[1. Coba fetch dari RemoteDatasource]
     
-    Repo --> Fetch{RemoteDatasource.getProfile}
+    TryRemote --> IsRemoteSuccess{API Sukses?}
     
-    %% Happy Path
-    Fetch -- "HTTP 200 OK" --> SaveCache[LocalDatasource.cacheProfile]
-    SaveCache --> ReturnSuccess([Right User Entity])
+    %% Baris Sukses (Happy Path)
+    IsRemoteSuccess -- "Ya (HTTP 200)" --> SaveCache[2. Timpa / Save ke LocalDatasource]
+    SaveCache --> ReturnRemote([3. Return Data Profil Baru])
     
-    %% Error Path 1 (No Internet)
-    Fetch -- "NetworkException / Timeout" --> FallbackCache
+    %% Baris Gagal (Fallback)
+    IsRemoteSuccess -- "Gagal (Koneksi Mati / Server Error)" --> TryLocal[2. Coba tarik data dari LocalDatasource]
     
-    %% Error Path 2 (Server Error)
-    Fetch -- "ServerException (5xx)" --> FallbackCache
+    TryLocal --> IsLocalExists{Cache Tersedia?}
     
-    %% Fallback Logic
-    FallbackCache{LocalDatasource.getCachedProfile}
-    
-    FallbackCache -- "Data Kosong (null)" --> ReturnError([Left Failure])
-    FallbackCache -- "Ada JSON Cache" --> MapJSON[Convert JSON to User Entity]
-    
-    MapJSON --> ReturnSuccess
-    
+    IsLocalExists -- "Ya (Ada Sisa Data)" --> ReturnLocal([3. Return Data Profil Lawas / Cache])
+    IsLocalExists -- "Tidak (Kosong / null)" --> ReturnError([3. Return Failure / Error])
+
     classDef success fill:#d4edda,stroke:#28a745,stroke-width:2px;
     classDef error fill:#f8d7da,stroke:#dc3545,stroke-width:2px;
-    classDef process fill:#e2e3e5,stroke:#6c757d;
+    classDef warning fill:#fff3cd,stroke:#ffc107,stroke-width:2px;
     
-    class ReturnSuccess success;
+    class ReturnRemote success;
+    class ReturnLocal warning;
     class ReturnError error;
-    class FallbackCache,SaveCache,MapJSON process;
 ```
