@@ -93,3 +93,41 @@ sequenceDiagram
         API-->>UI: Emit Error State
     end
 ```
+
+### 3. Repository Orchestration Flow (Profile Fallback)
+Di dalam `AuthRepositoryImpl`, tersimpan logika cerdas yang bertindak sebagai _Orchestrator_. Saat melempar request profil (misalnya saat _Splash Screen_ atau buka aplikasi di area _blank spot_), aplikasi harus bisa bertahan *(Graceful Degradation)*.
+
+Berikut adalah algoritma _Flowchart_ bagaimana Repository menjembatani kegagalan jaringan dengan menarik data sisa *(fallback)* dari cache lokal:
+
+```mermaid
+flowchart TD
+    Start([AuthBloc.getProfile]) --> Repo[AuthRepositoryImpl.getProfile]
+    
+    Repo --> Fetch{RemoteDatasource.getProfile}
+    
+    %% Happy Path
+    Fetch -- "HTTP 200 OK" --> SaveCache[LocalDatasource.cacheProfile]
+    SaveCache --> ReturnSuccess([Right User Entity])
+    
+    %% Error Path 1 (No Internet)
+    Fetch -- "NetworkException / Timeout" --> FallbackCache
+    
+    %% Error Path 2 (Server Error)
+    Fetch -- "ServerException (5xx)" --> FallbackCache
+    
+    %% Fallback Logic
+    FallbackCache{LocalDatasource.getCachedProfile}
+    
+    FallbackCache -- "Data Kosong (null)" --> ReturnError([Left Failure])
+    FallbackCache -- "Ada JSON Cache" --> MapJSON[Convert JSON to User Entity]
+    
+    MapJSON --> ReturnSuccess
+    
+    classDef success fill:#d4edda,stroke:#28a745,stroke-width:2px;
+    classDef error fill:#f8d7da,stroke:#dc3545,stroke-width:2px;
+    classDef process fill:#e2e3e5,stroke:#6c757d;
+    
+    class ReturnSuccess success;
+    class ReturnError error;
+    class FallbackCache,SaveCache,MapJSON process;
+```
