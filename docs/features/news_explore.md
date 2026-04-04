@@ -3,13 +3,58 @@
 ## Overview
 Modul News dan Explore adalah jantung dari penemuan konten dalam aplikasi ini. 
 
-### 1. News Tab (Dashboard)
-News tab bertugas menampilkan berita dengan kombinasi berbagai Cubit:
-- `CategoryCubit`: Mengatur filter kategori
-- `TrendingCubit`: Menampilkan carousel trending news
-- `NewsFeedCubit`: Menampilkan list berita utama dengan mekanisme Pagination (*Load More*).
+### 1. Arsitektur Komponen Bersama (Shared Architecture Tree)
 
-#### 1.1 Diagram: Pagination Flow (Load More)
+Keunikan terbesar modul ini bermuara pada akar efisiensinya. Meski layar memiliki **2 Tab Berbeda** (News & Explore) yang dihidupi oleh **4 Cubit Berbeda**, mereka semua diam-diam merujuk dan "menyedot" data dari **Satu UseCase dan Repository yang Sama**.
+Pendekatan ini menjamin satu sumber kebenaran (*Single Source of Truth*) dan mencegah duplikasi kode.
+
+```mermaid
+graph TD
+    classDef ui fill:#fdf4fb,stroke:#da70d6,stroke-width:2px;
+    classDef cubit fill:#e3f2fd,stroke:#2196f3,stroke-width:2px;
+    classDef domain fill:#e8f5e9,stroke:#4caf50,stroke-width:2px;
+    classDef data fill:#fff3e0,stroke:#ff9800,stroke-width:2px;
+
+    %% UI Pages
+    NewsPage(News Tab UI):::ui
+    ExplorePage(Explore Tab UI):::ui
+    
+    %% Cubits
+    CatCubit[CategoryCubit]:::cubit
+    TrendCubit[TrendingCubit]:::cubit
+    FeedCubit[NewsFeedCubit]:::cubit
+    ExpCubit[ExploreCubit]:::cubit
+
+    %% Wiring UI to Cubits
+    NewsPage --> CatCubit
+    NewsPage --> TrendCubit
+    NewsPage --> FeedCubit
+    ExplorePage --> ExpCubit
+
+    %% The Shared Core
+    UseCase((GetNewsFeedUseCase)):::domain
+    Repo{NewsRepositoryImpl}:::data
+    
+    %% Wiring Cubits to UseCase
+    CatCubit -.Tidak pakai UseCase Feed.-> X
+    TrendCubit ==>|includeHero: true| UseCase
+    FeedCubit ==>|page: N| UseCase
+    ExpCubit ==>|3x API calls, categories| UseCase
+
+    UseCase ===> Repo
+```
+
+---
+
+### 2. News Tab Feature (Beranda)
+News tab bertugas menampilkan berita utama menggunakan strategi **Composite Bloc**.
+
+#### 2.1 Paradigma "Composite" Cubit (Banyak State)
+Layar `NewsPage` sengahja dipecah paksa menjadi 3 Cubit berbeda (`CategoryCubit`, `TrendingCubit`, `NewsFeedCubit`).
+- **Alasan Utama (Isolasi Render):** Setiap sub-bagian layar punya laju perubahan yang ekstrem. *NewsFeed* sering memuat halaman baru, sementara *Trending* statis. Jika digabung menjadi 1 raksasa `NewsCubit`, saat *User* me-load halaman kedua berita, *seluruh Carousel Trending akan ikut di-render ulang!* 
+- Dengan memecahnya, *Flutter* hanya me-re-paint pecahan kecil layar yang benar-benar berubah, mengunci *Frame Rate* di 60 FPS.
+
+#### 2.2 Diagram: Pagination Flow (Load More)
 Ini adalah siklus bagaimana `NewsFeedCubit` bertumbuh secara bertahap menjaga efisiensi RAM, memuat halaman baru hanya jika pengguna melakukan *scroll* mendalam.
 
 ```mermaid
@@ -46,14 +91,17 @@ sequenceDiagram
     end
 ```
 
-### 2. Explore Tab
-Explore tab dirancang sebagai aggregator asinkron paralel. Tidak menggunakan Repository khusus, melainkan memakai ulang `GetNewsFeedUseCase`.
-- Diatur oleh single orchestrator `ExploreCubit`.
-- Memanggil 3 kategori berita berbeda (Tech, Business, Sports) secara bersamaan.
-- UI menampilkan efek *Pop-In* dinamis berdasarkan rekayasa _delay_ simulasi asinkronus jaringan.
+---
 
-#### 2.1 Diagram: Staggered Parallel Orchestration
-Ini adalah visualisasi bagaimana `ExploreCubit` memanggil 3 request ke server **secara bersamaan (paralel)** agar cepat, tetapi menyajikan hasilnya ke layar secara **berurutan (kaskade)** untuk efek UX *Pop-In* menggunakan *Artificial Delay*.
+### 3. Explore Tab Feature (Jelajah)
+Explore tab dirancang sebagai aggregator asinkron paralel. Tidak menggunakan Repository/UseCase khusus, melainkan memakai ulang `GetNewsFeedUseCase`.
+
+#### 3.1 Paradigma "Monolithic" Cubit (Satu Penampung)
+Berbeda dengan Tab Beranda, Jelajah memaksa menggunakan 1 `ExploreCubit` tunggal untuk menampung isi perut 3 *List* Berita (`Tech`, `Business`, `Sports`) di dalam wadah state yang sama.
+- **Alasan Utama (Orkestrasi Waktu):** Syarat UX layar Jelajah adalah memunculkan ketiganya secara berurutan *(staggered/kaskade)*. Jika menggunakan 3 Cubit berbeda, kita akan kesulitan setengah mati menyinkronkan waktu loading mereka. Dengan 1 Cubit Penguasa, satu buah fungsi *async* memegang stopwatch penuh mengontrol penayangan UI secara harmonis.
+
+#### 3.2 Diagram: Staggered Parallel Orchestration
+Ini adalah visualisasi bagaimana `ExploreCubit` memanggil 3 request ke server **secara bersamaan (paralel)**, tetapi menyajikan hasilnya ke layar secara **berurutan (kaskade)** untuk efek UX *Pop-In* menggunakan *Artificial Delay*.
 
 ```mermaid
 sequenceDiagram
@@ -184,22 +232,4 @@ Repository menyuntikkan Local Datasource dan mencegat `NetworkException` khusus 
 2. **Efisiensi Penyimpanan**: User tidak dibebani ukuran app membengkak seiring waktu karena data selalu ditimpa (overwrite).
 3. **User Experience**: Layar tidak pernah blank saat pertama buka app sambil masuk ke dalam lift bus train atau daerah susah sinyal.
 
----
 
-## 5. Paradigma Pembagian BLoC: Monolithic vs Composite
-
-Pertanyaan kritis arsitektur: *"Kenapa di Tab Beranda (News) kita memecah layarnya menjadi 3 Cubit berbeda (Category, Trending, Feed), sedangkan di Tab Explore kita memaksa 1 Cubit (ExploreCubit) sendirian mengurus 3 jenis berita sekaligus (Tech, Business, Sports)?"*
-
-Jawabannya adalah **Menyesuaikan Kebutuhan Lifecycle & Optimalisasi Render UI**.
-
-### A. Strategi *Composite* Banyak Cubit (Studi Kasus: Tab News)
-Di beranda, layar terpecah menjadi `CategoryCubit`, `TrendingCubit`, dan `NewsFeedCubit`.
-- **Alasan Utama (Memutus Rantai Render):** Setiap komponen punya laju perubahan yang sangat kontras. *NewsFeed* berubah-ubah terus karena proses _Load More (Pagination)_. *Trending* diam statis setelah 1x muat. *Category* hanya berubah saat User mengetuk tag filter.
-- **Dampak (Isolasi Re-Paint UI):** Jika 3 komponen raksasa ini digabung diletakkan di dalam 1 *Cubit/State*, maka saat _NewsFeed_ me-load halaman ke-2, *seluruh layar Beranda beserta Carousel Trending dan List Tag Kategori akan dirender *(re-build)* ulang oleh Flutter gara-gara 1 state raksasa berubah!*
-Dengan dicacah menjadi 3 Cubit independen, setiap `BlocBuilder` hanya akan bereaksi (re-paint ulang) secara mandiri di petak UI mereka masing-masing.
-
-### B. Strategi *Monolithic* Satu Cubit Penguasa (Studi Kasus: Tab Explore)
-Di laman Jelajah, 1 `ExploreCubit` menampung isi perut 3 List Berita (`listTech`, `listBusiness`, `listSports`) di dalam wadah state yang sama.
-- **Alasan Utama (Orkestrasi Waktu / Timing):** Syarat utama layar Explore di desain kita adalah memunculkan ketiganya secara berurutan *(Staggered kaskade delay 400ms)*. 
-- Jika ini dipaksakan menggunakan 3 Cubit (`TechCubit`, `BusinessCubit`, `SportsCubit`), kita akan stress mencoba menyinkronkan kapan `TechCubit` beres me-load agar `BusinessCubit` baru boleh _showcase_. Itu butuh `BlocListener` antar Cubit yang berlapis-lapis bagaikan *Spaghetti Code*.
-- **Dampak (Satu Komando Jenderal):** Dengan menjejalkan ketiga State list ke dalam 1 `ExploreCubit`, satu buah fungsi `Future.wait()` bisa memantau penuh penyajian ketiga kategori dan mengontrol injeksi jarum detik kapan komponen-komponen UI tersebut dikirim _(emit)_ ke layar secara terkoordinasi nan elegan.
