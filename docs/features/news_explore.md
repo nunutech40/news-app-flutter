@@ -7,13 +7,93 @@ Modul News dan Explore adalah jantung dari penemuan konten dalam aplikasi ini.
 News tab bertugas menampilkan berita dengan kombinasi berbagai Cubit:
 - `CategoryCubit`: Mengatur filter kategori
 - `TrendingCubit`: Menampilkan carousel trending news
-- `NewsFeedCubit`: Menampilkan list berita utama dengan *Load More*
+- `NewsFeedCubit`: Menampilkan list berita utama dengan mekanisme Pagination (*Load More*).
+
+#### 1.1 Diagram: Pagination Flow (Load More)
+Ini adalah siklus bagaimana `NewsFeedCubit` bertumbuh secara bertahap menjaga efisiensi RAM, memuat halaman baru hanya jika pengguna melakukan *scroll* mendalam.
+
+```mermaid
+sequenceDiagram
+    participant Scroll as ScrollController
+    participant Cubit as NewsFeedCubit
+    participant UC as GetNewsFeedUseCase
+    participant API as Backend (Page N)
+
+    Scroll->>Cubit: LoadMore() triggered at end of list
+    
+    %% Guard Closes
+    Cubit->>Cubit: Cek: Apakah isFetchingMore == true?
+    alt Sedang memuat
+        Cubit-->>Scroll: Abaikan (Pencegahan request ganda)
+    else Belum memuat & currentPage < totalPages
+        Cubit->>Cubit: isFetchingMore = true
+        Cubit-->>Scroll: emit(Munculkan Loading Bawah)
+        
+        Cubit->>UC: fetch(page: currentPage + 1)
+        UC->>API: GET /feed?page=N+1
+        
+        API-->>UC: Response (List Berita Baru)
+        UC-->>Cubit: Left/Right
+        
+        alt Sukses
+            Cubit->>Cubit: Gabungkan berita lama + Baru (List.addAll)
+            Cubit->>Cubit: currentPage = currentPage + 1
+            Cubit-->>Scroll: emit(LoadedState with larger List)
+        else Gagal
+            Cubit-->>Scroll: emit(Error tapi List lama tetap aman)
+        end
+        Cubit->>Cubit: isFetchingMore = false
+    end
+```
 
 ### 2. Explore Tab
 Explore tab dirancang sebagai aggregator asinkron paralel. Tidak menggunakan Repository khusus, melainkan memakai ulang `GetNewsFeedUseCase`.
 - Diatur oleh single orchestrator `ExploreCubit`.
 - Memanggil 3 kategori berita berbeda (Tech, Business, Sports) secara bersamaan.
 - UI menampilkan efek *Pop-In* dinamis berdasarkan rekayasa _delay_ simulasi asinkronus jaringan.
+
+#### 2.1 Diagram: Staggered Parallel Orchestration
+Ini adalah visualisasi bagaimana `ExploreCubit` memanggil 3 request ke server **secara bersamaan (paralel)** agar cepat, tetapi menyajikan hasilnya ke layar secara **berurutan (kaskade)** untuk efek UX *Pop-In* menggunakan *Artificial Delay*.
+
+```mermaid
+sequenceDiagram
+    participant UI as ExplorePage
+    participant Cubit as ExploreCubit
+    participant UC as GetNewsFeedUseCase
+    participant API as Backend Server
+
+    UI->>Cubit: loadAllSections()
+    Cubit->>Cubit: emit(Loading)
+    
+    note over Cubit,API: Memulai 3 Request Paralel (Future.wait)
+    
+    par Tech Category
+        Cubit->>UC: fetch(category: 'tech')
+        UC->>API: GET /feed?category=tech
+    and Business Category
+        Cubit->>UC: fetch(category: 'business')
+        UC->>API: GET /feed?category=business
+    and Sports Category
+        Cubit->>UC: fetch(category: 'sports')
+        UC->>API: GET /feed?category=sports
+    end
+
+    %% Response handling with artificial delays
+    API-->>UC: Response (Tech)
+    UC-->>Cubit: Left/Right
+    Cubit->>Cubit: (await 400ms delay)
+    Cubit-->>UI: emit(Tech Loaded) - Kartu 1 Muncul!
+    
+    API-->>UC: Response (Business)
+    UC-->>Cubit: Left/Right
+    Cubit->>Cubit: (await 800ms delay)
+    Cubit-->>UI: emit(Business Loaded) - Kartu 2 Muncul!
+    
+    API-->>UC: Response (Sports)
+    UC-->>Cubit: Left/Right
+    Cubit->>Cubit: (await 1200ms delay)
+    Cubit-->>UI: emit(Sports Loaded) - Kartu 3 Muncul!
+```
 
 ---
 
