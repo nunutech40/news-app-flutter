@@ -182,29 +182,29 @@ Untuk memudahkan pemahaman logika _if-else_ di dalam `NewsRepositoryImpl`, berik
 
 ```mermaid
 flowchart TD
-    Start([Buka Aplikasi / Tarik Layar down-to-refresh]) --> Repo[NewsRepositoryImpl.getFeed]
+    Start(["Buka Aplikasi / Tarik Layar down-to-refresh"]) --> Repo["NewsRepositoryImpl.getFeed"]
     
-    Repo --> IsPageOne{Apakah Page 1 & <br/>Kategori 'All'?}
+    Repo --> IsPageOne{"Apakah Page 1 & <br/>Kategori 'All'?"}
     
-    IsPageOne -- BUKAN (Lagi cari Kategori/Halaman lain) --> FetchRemoteAlways[Force Fetch dari Remote API]
-    FetchRemoteAlways --> ReturnStrict([Return Data / Failure])
+    IsPageOne -- "BUKAN (Lagi cari Kategori/Halaman lain)" --> FetchRemoteAlways["Force Fetch dari Remote API"]
+    FetchRemoteAlways --> ReturnStrict(["Return Data / Failure"])
     
     %% Jika beneran beranda utama
-    IsPageOne -- YA --> FetchRemote[1. Coba fetch dari Remote API]
+    IsPageOne -- "YA" --> FetchRemote["1. Coba fetch dari Remote API"]
     
-    FetchRemote --> IsRemoteSuccess{API Sukses?}
+    FetchRemote --> IsRemoteSuccess{"API Sukses?"}
     
     %% Baris Sukses
-    IsRemoteSuccess -- "Ya (HTTP 200 OK)" --> SaveCache[2. Timpa (Overwrite) JSON ke LocalDatasource]
-    SaveCache --> ReturnRemote([Return Daftar Berita Terbaru])
+    IsRemoteSuccess -- "Ya (HTTP 200 OK)" --> SaveCache["2. Timpa (Overwrite) JSON ke LocalDatasource"]
+    SaveCache --> ReturnRemote(["Return Daftar Berita Terbaru"])
     
     %% Baris Gagal
-    IsRemoteSuccess -- "Gagal (Loading Lama / Tidak Ada Internet)" --> TryLocal[2. Aktifkan Mode Penyelamatan. <br/>Tarik data dari LocalDatasource]
+    IsRemoteSuccess -- "Gagal (Loading Lama / Tidak Ada Internet)" --> TryLocal["2. Aktifkan Mode Penyelamatan. <br/>Tarik data dari LocalDatasource"]
     
-    TryLocal --> IsLocalExists{Cache Sisa Tersedia?}
+    TryLocal --> IsLocalExists{"Cache Sisa Tersedia?"}
     
-    IsLocalExists -- "Ya (Ada Berita Kemarin)" --> ReturnLocal([Return Daftar Berita Lawas Cache])
-    IsLocalExists -- "Tidak (App Baru Diinstal)" --> ReturnError([Lempar NetworkException ke UI])
+    IsLocalExists -- "Ya (Ada Berita Kemarin)" --> ReturnLocal(["Return Daftar Berita Lawas Cache"])
+    IsLocalExists -- "Tidak (App Baru Diinstal)" --> ReturnError(["Lempar NetworkException ke UI"])
 
     classDef success fill:#d4edda,stroke:#28a745,stroke-width:2px;
     classDef error fill:#f8d7da,stroke:#dc3545,stroke-width:2px;
