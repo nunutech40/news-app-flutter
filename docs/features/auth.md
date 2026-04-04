@@ -4,9 +4,20 @@
 Modul Auth bertugas mengelola siklus hidup _user authentication_. 
 
 ### 1. State Management (AuthBloc)
-- Bertindak sebagai _Global Singleton_ yang mengatur status login secara global.
-- Event yang ada: `AuthCheckRequested`, `AuthLoginRequested`, `AuthRegisterRequested`, `AuthLogoutRequested`.
-- Didaftarkan di `main.dart` untuk memastikan navigasi _GoRouter_ mengetahui kapan harus mencegah akses masuk (`redirect`).
+Modul otentikasi menggunakan `AuthBloc` yang sengaja dirancang sebagai **Global Singleton (`registerLazySingleton`)**. Kenapa demikian?
+
+#### Mengapa Global Singleton?
+Status "Login" seorang pengguna memengaruhi hampir seluruh bagian aplikasi (bukan cuma satu halaman). Kita butuh **satu _Source of Truth_ (Sumber Sentral)** yang otentik.
+- Agar **GoRouter** di seluruh penjuru aplikasi bisa mendengarkan apakah dia harus memblokir jalur ke halaman terlarang.
+- Agar **Interceptor API** bisa menyuntikkan token dari _session_ yang aktif, atau melakukan _logout_ otomatis bila Refresh Token tertolak.
+
+#### Inisialisasi & Lifecycle
+- **Registrasi**: `AuthBloc` didaftarkan di dalam `lib/injection_container.dart` (oleh GetIt) sebagai _LazySingleton_. 
+- **Inisialisasi**: Fisik `AuthBloc` ditiupkan rohnya ke _Widget Tree_ _tertinggi_ (di akar layar) menggunakan `BlocProvider(create: (_) => sl<AuthBloc>())` di dalam file `main.dart`, persis membungkus `MaterialApp.router`.
+- **Siklus Hidup (Lifecycle)**: Karena BLoC ini dideklarasikan di puncak UI teratas, ia dikategorikan sebagai **Residen Abadi**. Ia lahir saat aplikasi dibuka dan baru akan mati (hancur) apabila pengguna menutup paksa *(Force Close)* aplikasi. Selama app berjalan, state *(User Profile + Token)* di dalam `AuthBloc` akan terus menetap di RAM.
+
+**Event yang Tersedia**: 
+`AuthCheckRequested`, `AuthLoginRequested`, `AuthRegisterRequested`, `AuthLogoutRequested`.
 
 ### 2. Network & Token
 - Penyimpanan Token secara aman via `FlutterSecureStorage` (di `SecureTokenStorage`).
