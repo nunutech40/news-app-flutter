@@ -183,3 +183,23 @@ Repository menyuntikkan Local Datasource dan mencegat `NetworkException` khusus 
 1. **Performa Tinggi**: Ukuran string JSON 1 halaman berita (< 200KB) sangat kecil untuk diurai (parse).
 2. **Efisiensi Penyimpanan**: User tidak dibebani ukuran app membengkak seiring waktu karena data selalu ditimpa (overwrite).
 3. **User Experience**: Layar tidak pernah blank saat pertama buka app sambil masuk ke dalam lift bus train atau daerah susah sinyal.
+
+---
+
+## 5. Paradigma Pembagian BLoC: Monolithic vs Composite
+
+Pertanyaan kritis arsitektur: *"Kenapa di Tab Beranda (News) kita memecah layarnya menjadi 3 Cubit berbeda (Category, Trending, Feed), sedangkan di Tab Explore kita memaksa 1 Cubit (ExploreCubit) sendirian mengurus 3 jenis berita sekaligus (Tech, Business, Sports)?"*
+
+Jawabannya adalah **Menyesuaikan Kebutuhan Lifecycle & Optimalisasi Render UI**.
+
+### A. Strategi *Composite* Banyak Cubit (Studi Kasus: Tab News)
+Di beranda, layar terpecah menjadi `CategoryCubit`, `TrendingCubit`, dan `NewsFeedCubit`.
+- **Alasan Utama (Memutus Rantai Render):** Setiap komponen punya laju perubahan yang sangat kontras. *NewsFeed* berubah-ubah terus karena proses _Load More (Pagination)_. *Trending* diam statis setelah 1x muat. *Category* hanya berubah saat User mengetuk tag filter.
+- **Dampak (Isolasi Re-Paint UI):** Jika 3 komponen raksasa ini digabung diletakkan di dalam 1 *Cubit/State*, maka saat _NewsFeed_ me-load halaman ke-2, *seluruh layar Beranda beserta Carousel Trending dan List Tag Kategori akan dirender *(re-build)* ulang oleh Flutter gara-gara 1 state raksasa berubah!*
+Dengan dicacah menjadi 3 Cubit independen, setiap `BlocBuilder` hanya akan bereaksi (re-paint ulang) secara mandiri di petak UI mereka masing-masing.
+
+### B. Strategi *Monolithic* Satu Cubit Penguasa (Studi Kasus: Tab Explore)
+Di laman Jelajah, 1 `ExploreCubit` menampung isi perut 3 List Berita (`listTech`, `listBusiness`, `listSports`) di dalam wadah state yang sama.
+- **Alasan Utama (Orkestrasi Waktu / Timing):** Syarat utama layar Explore di desain kita adalah memunculkan ketiganya secara berurutan *(Staggered kaskade delay 400ms)*. 
+- Jika ini dipaksakan menggunakan 3 Cubit (`TechCubit`, `BusinessCubit`, `SportsCubit`), kita akan stress mencoba menyinkronkan kapan `TechCubit` beres me-load agar `BusinessCubit` baru boleh _showcase_. Itu butuh `BlocListener` antar Cubit yang berlapis-lapis bagaikan *Spaghetti Code*.
+- **Dampak (Satu Komando Jenderal):** Dengan menjejalkan ketiga State list ke dalam 1 `ExploreCubit`, satu buah fungsi `Future.wait()` bisa memantau penuh penyajian ketiga kategori dan mengontrol injeksi jarum detik kapan komponen-komponen UI tersebut dikirim _(emit)_ ke layar secara terkoordinasi nan elegan.
