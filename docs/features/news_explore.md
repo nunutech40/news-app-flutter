@@ -169,7 +169,7 @@ NewsApp menerapkan manajemen memori yang ketat dengan kombinasi GetIt (Pabrik) d
 
 Dokumen ini menjelaskan strategi *Graceful Degradation* untuk fitur News Feed sehingga aplikasi tetap bisa menampilkan data dan tidak kosong melompong saat perangkat pengguna offline atau jaringan bermasalah.
 
-### 3.1 Konsep Utama
+### 4.1 Konsep Utama
 Alih-alih menyimpan seluruh database berita (yang akan memakan banyak Storage memori pengguna), aplikasi **hanya menyimpan (cache) halaman pertama (Page 1) dari feed berita utama (Kategori 'All')**. 
 
 *   **Target Penyimpanan**: `SharedPreferences` (dalam bentuk JSON Text / String).
@@ -177,8 +177,46 @@ Alih-alih menyimpan seluruh database berita (yang akan memakan banyak Storage me
     *   **Write**: Saat HTTP response sukses dari endpoint `getFeed(page: 1, category: null)`.
     *   **Read**: Saat `ApiClient` melempar `NetworkException` dalam upaya memuat endpoint `getFeed(page: 1, category: null)`.
 
-### 3.2 Alur Eksekusi (Orchestration)
-Implementasi ini ditangani langsung di repositori data (`NewsRepositoryImpl`), menjadikannya sebagai _Smart Orchestrator_.
+### 4.2 Flowchart: Algoritma Fallback Repository
+Untuk memudahkan pemahaman logika _if-else_ di dalam `NewsRepositoryImpl`, berikut adalah bagan *Decision Tree* saat memuat Beranda (_Feed_). Berbeda dengan Profil, _Cache_ Beranda **HANYA** diaktifkan khusus untuk `Page 1`. Halaman 2, 3, dst (hasil gulir ke bawah) tidak akan di-_cache_ demi menghemat ruang penyimpanan HP.
+
+```mermaid
+flowchart TD
+    Start([Buka Aplikasi / Tarik Layar down-to-refresh]) --> Repo[NewsRepositoryImpl.getFeed]
+    
+    Repo --> IsPageOne{Apakah Page 1 & <br/>Kategori 'All'?}
+    
+    IsPageOne -- BUKAN (Lagi cari Kategori/Halaman lain) --> FetchRemoteAlways[Force Fetch dari Remote API]
+    FetchRemoteAlways --> ReturnStrict([Return Data / Failure])
+    
+    %% Jika beneran beranda utama
+    IsPageOne -- YA --> FetchRemote[1. Coba fetch dari Remote API]
+    
+    FetchRemote --> IsRemoteSuccess{API Sukses?}
+    
+    %% Baris Sukses
+    IsRemoteSuccess -- "Ya (HTTP 200 OK)" --> SaveCache[2. Timpa (Overwrite) JSON ke LocalDatasource]
+    SaveCache --> ReturnRemote([Return Daftar Berita Terbaru])
+    
+    %% Baris Gagal
+    IsRemoteSuccess -- "Gagal (Loading Lama / Tidak Ada Internet)" --> TryLocal[2. Aktifkan Mode Penyelamatan. <br/>Tarik data dari LocalDatasource]
+    
+    TryLocal --> IsLocalExists{Cache Sisa Tersedia?}
+    
+    IsLocalExists -- "Ya (Ada Berita Kemarin)" --> ReturnLocal([Return Daftar Berita Lawas Cache])
+    IsLocalExists -- "Tidak (App Baru Diinstal)" --> ReturnError([Lempar NetworkException ke UI])
+
+    classDef success fill:#d4edda,stroke:#28a745,stroke-width:2px;
+    classDef error fill:#f8d7da,stroke:#dc3545,stroke-width:2px;
+    classDef warning fill:#fff3cd,stroke:#ffc107,stroke-width:2px;
+    
+    class ReturnRemote success;
+    class ReturnLocal warning;
+    class ReturnError error;
+```
+
+### 4.3 Sequence Diagram: Orkestrasi Lengkap
+Jika flowchart di atas merangkum keputusan algoritma, diagram sekuens di bawah memetakan bagaimana urutan waktunya bergulir dari UI ke API:
 
 ```mermaid
 sequenceDiagram
@@ -212,9 +250,9 @@ sequenceDiagram
     end
 ```
 
-### 3.3 Komponen yang Terlibat
+### 4.4 Komponen yang Terlibat
 
-#### A. `NewsLocalDatasource` (Baru)
+#### A. `NewsLocalDatasource`
 Antarmuka baru yang berinteraksi dengan `SharedPreferences`:
 ```dart
 abstract class NewsLocalDatasource {
@@ -224,10 +262,10 @@ abstract class NewsLocalDatasource {
 ```
 *Gunakan `jsonEncode` untuk menyimpan dan `jsonDecode` saat mengambil data.*
 
-#### B. `NewsRepositoryImpl` (Modifikasi)
+#### B. `NewsRepositoryImpl`
 Repository menyuntikkan Local Datasource dan mencegat `NetworkException` khusus untuk pencarian `page == 1 && category == null`.
 
-### 3.4 Keuntungan Pendekatan Ini
+### 4.5 Keuntungan Pendekatan Ini
 1. **Performa Tinggi**: Ukuran string JSON 1 halaman berita (< 200KB) sangat kecil untuk diurai (parse).
 2. **Efisiensi Penyimpanan**: User tidak dibebani ukuran app membengkak seiring waktu karena data selalu ditimpa (overwrite).
 3. **User Experience**: Layar tidak pernah blank saat pertama buka app sambil masuk ke dalam lift bus train atau daerah susah sinyal.
