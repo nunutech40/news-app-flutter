@@ -1057,6 +1057,19 @@ graph TD
     class RouterTab0,RouterTab1,RouterTab2 branch;
 ```
 
+### 13.5 Panduan Metode Navigasi (GoRouter API)
+
+Pengembang diwajibkan untuk memahami kapan menggunakan metode navigasi yang tepat agar struktur tumpukan layar (*route stack*) tetap sehat dan terhindar dari *bocor memori / broken backward navigation*.
+
+| Metode Code | Perilaku & Hasil Tumpukan (Stack) | Contoh Kasus Penggunaan (Use-Case) |
+|-------------|-----------------------------------|----------------------------------|
+| **`context.push()` / `pushNamed()`** | **Menumpuk layar (Push)** di atas rute saat ini. Pengguna *BISA menekan tombol Back* untuk kembali ke layar asalnya. | Buka layar Detail Berita (dari Dashboard). Dari Login pindah ke Register (agar User bisa mundur batal). |
+| **`context.go()` / `goNamed()`** | **Menimpa & Melompat (Replace/Jump)** ke URL tujuan. Mengganti murni rute *Top Level*. Pengguna *TIDAK BISA menekan tombol Back* ke tempat asal. | (Jarang dipanggil manual). Biasanya dipakai untuk Navigasi antar Bottom Navigation menu atau ke halaman akar. |
+| **Global Redirect (Automated)** | **Pemusnahan Mutlak (PushAndRemoveUntil)** yang dilakukan sistem router *GoRouter* (di `app_router.dart`) secara rahasia. Semua tumpukan layar yang kacau akan ditebas bersih dan diganti dengan 1 rute _Top Level_. | Ketika User sukses **Login** (berpindah ke `/dashboard`) atau berhasil **Logout** (ditendang ke `/login`). Programmer *TIDAK BOLEH* memanggil `pushReplacement` manual untuk urusan _Auth_, percayakan pada sistem Redirect! |
+| **`context.pop()`** | **Membakar 1 Tumpukan teratas (Pop)**. Menggugurkan layar yang sedang aktif dan mundur persis 1 langkah ke belakang. | Menutup form halaman (*Edit Profile*), menutup Alert/Dialog/BottomSheet, atau memencet tombol <- Kembali. |
+
+---
+
 ## 14. Dependency Injection
 
 ### 14.1 Registration Order
