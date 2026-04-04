@@ -787,7 +787,7 @@ getProfile() called
 ```
 
 ### 10.4 Offline Caching Strategy (News Feed)
-Selain user profile, aplikasi mengimplementasikan konsep *Offline-First / Graceful Degradation* untuk *news feed* utama menggunakan `SharedPreferences`. Skema dan interaksi *orchestration* dibahas terpisah dalam dokumen **[Offline Caching Strategy](offline_caching_strategy.md)**.
+Selain user profile, aplikasi mengimplementasikan konsep *Offline-First / Graceful Degradation* untuk *news feed* utama menggunakan `SharedPreferences`. Skema dan interaksi *orchestration* dibahas terpisah dan telah dipadukan ke dalam dokumen **[News & Explore Features (Section 3)](features/news_explore.md)**.
 
 ---
 
