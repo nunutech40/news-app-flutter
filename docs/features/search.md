@@ -136,36 +136,36 @@ void dispose() {
 
 ```mermaid
 flowchart TD
-    User([User Mengetik di TextField]) --> onChange[_onSearchChanged dipanggil]
-    onChange --> DebounceActive{Timer 500ms aktif?}
-    DebounceActive -- Ya --> CancelTimer[Cancel timer lama]
-    CancelTimer --> NewTimer[Buat Timer baru 500ms]
+    User(["User Mengetik di TextField"]) --> onChange["_onSearchChanged dipanggil"]
+    onChange --> DebounceActive{"Timer 500ms aktif?"}
+    DebounceActive -- Ya --> CancelTimer["Cancel timer lama"]
+    CancelTimer --> NewTimer["Buat Timer baru 500ms"]
     DebounceActive -- Tidak --> NewTimer
 
-    NewTimer --> Wait[Tunggu 500ms...]
-    Wait --> QueryEmpty{query.trim() kosong?}
+    NewTimer --> Wait["Tunggu 500ms..."]
+    Wait --> QueryEmpty{"query kosong?"}
     
-    QueryEmpty -- Ya --> EmitInitial[emit SearchInitial]
-    EmitInitial --> ShowEmpty[UI: Tampilkan EmptyView telusuri]
+    QueryEmpty -- Ya --> EmitInitial["emit SearchInitial"]
+    EmitInitial --> ShowEmpty["UI: Tampilkan EmptyView telusuri"]
     
-    QueryEmpty -- Tidak --> SetQuery[_currentQuery = query]
-    SetQuery --> EmitLoading[emit SearchLoading]
-    EmitLoading --> ShowSpinner[UI: CircularProgressIndicator]
+    QueryEmpty -- Tidak --> SetQuery["_currentQuery = query"]
+    SetQuery --> EmitLoading["emit SearchLoading"]
+    EmitLoading --> ShowSpinner["UI: CircularProgressIndicator"]
     
-    ShowSpinner --> CallUseCase[GetNewsFeedUseCase.call]
-    CallUseCase --> API[GET /api/v1/news?q=...&page=1&limit=15]
+    ShowSpinner --> CallUseCase["GetNewsFeedUseCase.call"]
+    CallUseCase --> API["GET /api/v1/news?q=...&page=1&limit=15"]
     
-    API --> Success{Sukses?}
+    API --> Success{"Sukses?"}
     
-    Success -- Ya --> EmitLoaded[emit SearchLoaded]
-    EmitLoaded --> ArticlesEmpty{articles kosong?}
-    ArticlesEmpty -- Ya --> ShowNotFound[UI: EmptyView tidak ditemukan]
-    ArticlesEmpty -- Tidak --> ShowResults[UI: ListView hasil pencarian]
+    Success -- Ya --> EmitLoaded["emit SearchLoaded"]
+    EmitLoaded --> ArticlesEmpty{"articles kosong?"}
+    ArticlesEmpty -- Ya --> ShowNotFound["UI: EmptyView tidak ditemukan"]
+    ArticlesEmpty -- Tidak --> ShowResults["UI: ListView hasil pencarian"]
     
-    Success -- Tidak --> CheckStale{_currentQuery == query?}
-    CheckStale -- Ya --> EmitError[emit SearchError]
-    CheckStale -- Tidak --> Ignore[Abaikan - response kadaluarsa]
-    EmitError --> ShowError[UI: EmptyView error + pesan]
+    Success -- Tidak --> CheckStale{"_currentQuery == query?"}
+    CheckStale -- Ya --> EmitError["emit SearchError"]
+    CheckStale -- Tidak --> Ignore["Abaikan - response kadaluarsa"]
+    EmitError --> ShowError["UI: EmptyView error + pesan"]
 
     classDef success fill:#d4edda,stroke:#28a745,stroke-width:2px;
     classDef error fill:#f8d7da,stroke:#dc3545,stroke-width:2px;
