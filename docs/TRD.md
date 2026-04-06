@@ -9,6 +9,7 @@
 | **Version** | 1.0.0 |
 | **Author** | Nunu Nugraha |
 | **Created** | 2026-04-01 |
+| **Last Updated** | 2026-04-06 |
 | **Status** | In Development |
 
 ---
@@ -43,11 +44,15 @@ News App adalah aplikasi mobile berbasis Flutter yang mengkonsumsi REST API untu
 
 ### 1.2 Scope
 
-| Module | Features | Priority |
-|--------|----------|----------|
-| **Auth** | Register, Login, Profile, Logout, Token Refresh | P0 - Core |
-| **Dashboard** | User profile display, stats, quick actions | P0 - Core |
-| **News** | Browse, read, search, bookmark articles | P1 - Future |
+| Module | Features | Priority | Status |
+|--------|----------|----------|--------|
+| **Auth** | Register, Login, Profile Update (Avatar/Bio/Phone), Logout, Token Refresh | P0 - Core | ✅ Done |
+| **Dashboard** | Shell BottomNavigationBar (5 tabs: Berita, Jelajah, Cari, Simpan, Profil) | P0 - Core | ✅ Done |
+| **News Feed** | Browse artikel, filter kategori, trending, refresh | P0 - Core | ✅ Done |
+| **Explore** | Browse artikel per kategori dengan pagination | P1 - Core | ✅ Done |
+| **Search** | Pencarian artikel dengan debounce & pagination | P1 - Core | ✅ Done |
+| **Bookmarks** | Simpan/hapus artikel dengan optimistic updating & local cache | P1 - Core | ✅ Done |
+| **Article Detail** | Baca artikel full dengan bookmark toggle | P1 - Core | ✅ Done |
 
 ### 1.3 Backend API
 
@@ -246,11 +251,14 @@ lib/
 |-- injection_container.dart                     # GetIt DI registration
 |
 |-- core/                                        # Shared utilities
+|   |-- bloc/
+|   |   +-- global_alert/
+|   |       +-- global_alert_bloc.dart           # Global network error alert BLoC
 |   |-- constants/
 |   |   +-- api_constants.dart                   # Base URL, endpoints, storage keys
 |   |-- error/
-|   |   |-- exceptions.dart                      # ServerException, CacheException
-|   |   +-- failures.dart                        # ServerFailure, UnauthorizedFailure
+|   |   |-- exceptions.dart                      # ServerException, CacheException, dll
+|   |   +-- failures.dart                        # ServerFailure, UnauthorizedFailure, dll
 |   |-- network/
 |   |   |-- api_client.dart                      # Dio wrapper, single request method
 |   |   |-- auth_interceptor.dart                # Token injection + refresh with lock
@@ -270,34 +278,78 @@ lib/
     |   |   |   +-- auth_remote_datasource.dart  # API calls via ApiClient
     |   |   |-- models/
     |   |   |   |-- auth_tokens_model.dart       # JSON to AuthTokens
-    |   |   |   +-- user_model.dart              # JSON to User
+    |   |   |   +-- user_model.dart              # JSON to User (incl. avatarUrl, bio, phone)
     |   |   +-- repositories/
     |   |       +-- auth_repository_impl.dart    # Combines remote + local DS
     |   |-- domain/
     |   |   |-- entities/
     |   |   |   |-- auth_tokens.dart             # Pure Dart, Equatable
-    |   |   |   +-- user.dart                    # Pure Dart, Equatable
+    |   |   |   +-- user.dart                    # Pure Dart (id, name, email, avatarUrl, bio, phone, preferences)
     |   |   |-- repositories/
     |   |   |   +-- auth_repository.dart         # Abstract contract
     |   |   +-- usecases/
     |   |       |-- get_profile_usecase.dart
     |   |       |-- login_usecase.dart
     |   |       |-- logout_usecase.dart
-    |   |       +-- register_usecase.dart
+    |   |       |-- register_usecase.dart
+    |   |       +-- update_profile_usecase.dart  # ✅ UPDATE PROFILE
     |   +-- presentation/
     |       |-- bloc/
     |       |   |-- auth_bloc.dart               # Global singleton BLoC
     |       |   |-- auth_event.dart
     |       |   +-- auth_state.dart
+    |       |-- cubit/
+    |       |   |-- profile_cubit.dart           # ✅ Local cubit for edit profile form
+    |       |   +-- profile_state.dart
     |       |-- pages/
     |       |   |-- login_page.dart
-    |       |   +-- register_page.dart
+    |       |   |-- register_page.dart
+    |       |   +-- profile_page.dart            # ✅ Profile Screen (avatar, bio, phone)
     |       +-- widgets/
-    |           +-- auth_text_field.dart
+    |           |-- auth_text_field.dart
+    |           +-- edit_profile_bottom_sheet.dart  # ✅ Edit form bottom sheet
     |
     |-- dashboard/
     |   +-- presentation/pages/
-    |       +-- dashboard_page.dart
+    |       +-- dashboard_page.dart              # Shell: IndexedStack + BottomNavigationBar (5 tabs)
+    |
+    |-- news/
+    |   |-- data/
+    |   |   |-- datasources/
+    |   |   |   |-- news_remote_datasource.dart  # API: news feed, categories, article detail
+    |   |   |   +-- news_local_datasource.dart   # SharedPrefs: bookmark cache, feed cache
+    |   |   |-- models/
+    |   |   |   +-- news_models.dart             # ArticleModel, CategoryModel
+    |   |   +-- repositories/
+    |   |       +-- news_repository_impl.dart
+    |   |-- domain/
+    |   |   |-- entities/
+    |   |   |   |-- article.dart                 # Article entity
+    |   |   |   +-- category.dart               # Category entity
+    |   |   |-- repositories/
+    |   |   |   +-- news_repository.dart         # Abstract contract
+    |   |   +-- usecases/
+    |   |       |-- get_news_feed_usecase.dart
+    |   |       |-- get_categories_usecase.dart
+    |   |       |-- get_article_usecase.dart
+    |   |       |-- get_bookmarks_usecase.dart
+    |   |       |-- toggle_bookmark_usecase.dart
+    |   |       +-- check_bookmark_status_usecase.dart
+    |   +-- presentation/
+    |       |-- cubit/
+    |       |   |-- news_feed_cubit.dart         # Feed: load, refresh, filter by category
+    |       |   |-- category_cubit.dart          # Load category list
+    |       |   |-- trending_cubit.dart          # Load trending articles
+    |       |   |-- explore_cubit.dart           # Explore: category browsing + pagination
+    |       |   |-- search_cubit.dart            # Search with debounce + pagination
+    |       |   |-- bookmark_cubit.dart          # Bookmark state + optimistic updating
+    |       |   +-- article_detail_cubit.dart    # Load single article + bookmark toggle
+    |       +-- pages/
+    |           |-- news_feed_page.dart          # Tab 0: Home (Berita)
+    |           |-- explore_page.dart            # Tab 1: Jelajah
+    |           |-- news_search_page.dart        # Tab 2: Cari
+    |           |-- bookmark_page.dart           # Tab 3: Simpan
+    |           +-- news_detail_page.dart        # Full article reader (push route)
     |
     +-- splash/
         +-- presentation/pages/
@@ -349,12 +401,26 @@ abstract class AuthRepository {
 
 Setiap use case merepresentasikan **satu business action**:
 
+#### Auth Use Cases
+
 | UseCase | Input | Output |
 |---------|-------|--------|
 | `LoginUseCase` | `LoginParams(email, password)` | `Either<Failure, AuthTokens>` |
 | `RegisterUseCase` | `RegisterParams(name, email, password)` | `Either<Failure, User>` |
 | `GetProfileUseCase` | `NoParams` | `Either<Failure, User>` |
+| `UpdateProfileUseCase` | `User` (updated entity) | `Either<Failure, User>` |
 | `LogoutUseCase` | `NoParams` | `Either<Failure, void>` |
+
+#### News Use Cases
+
+| UseCase | Input | Output |
+|---------|-------|--------|
+| `GetCategoriesUseCase` | `NoParams` | `Either<Failure, List<Category>>` |
+| `GetNewsFeedUseCase` | `FeedParams(categoryId?, page)` | `Either<Failure, List<Article>>` |
+| `GetArticleUseCase` | `String slug` | `Either<Failure, Article>` |
+| `GetBookmarksUseCase` | `NoParams` | `Either<Failure, List<Article>>` |
+| `ToggleBookmarkUseCase` | `Article` | `Either<Failure, bool>` (isBookmarked) |
+| `CheckBookmarkStatusUseCase` | `String slug` | `Either<Failure, bool>` |
 
 ### 6.2 Data Layer
 
@@ -379,8 +445,10 @@ class UserModel extends User {
 
 | Datasource | Source | Methods |
 |-----------|--------|---------|
-| `AuthRemoteDatasource` | REST API via `ApiClient` | `register()`, `login()`, `getProfile()`, `logout()` |
+| `AuthRemoteDatasource` | REST API via `ApiClient` | `register()`, `login()`, `getProfile()`, `updateProfile()`, `logout()` |
 | `AuthLocalDatasource` | SecureStorage + SharedPrefs | Token CRUD, Profile cache, `clearAll()` |
+| `NewsRemoteDatasource` | REST API via `ApiClient` | `getCategories()`, `getNewsFeed()`, `getArticle()`, `uploadAvatar()` |
+| `NewsLocalDatasource` | SharedPreferences | Bookmark CRUD (read/write/clear), Feed cache |
 
 > [!NOTE]
 > **Kenapa tidak pisah jadi `LoginDatasource`, `RegisterDatasource`?**
@@ -397,12 +465,25 @@ class AuthRepositoryImpl implements AuthRepository {
 
 **Orchestration logic:**
 
+**Auth Repository orchestration:**
+
 | Method | Flow |
 |--------|------|
-| `login()` | Remote: call API -> Local: save tokens |
-| `getProfile()` | Remote: call API -> Local: cache profile -> Fallback: return cached if API fails |
-| `logout()` | Remote: call API -> Local: `clearAll()` always, even if API fails |
+| `login()` | Remote: call API → Local: save tokens |
+| `getProfile()` | Remote: call API → Local: cache profile → Fallback: return cached if API fails |
+| `updateProfile()` | Remote: `PUT /api/v1/auth/me` → Local: update profile cache |
+| `logout()` | Remote: call API → Local: `clearAll()` always, even if API fails |
 | `isAuthenticated()` | Local: check token exists |
+
+**News Repository orchestration:**
+
+| Method | Flow |
+|--------|------|
+| `getNewsFeed()` | Remote: call API → Local: cache to SharedPrefs → Fallback: return cached |
+| `getCategories()` | Remote: call API → return list |
+| `getArticle()` | Remote: call API → return Article |
+| `toggleBookmark()` | Local: optimistic update SharedPrefs → propagate to UI → sync |
+| `getBookmarks()` | Local: read from SharedPrefs cache |
 
 ### 6.3 Presentation Layer
 
@@ -545,6 +626,96 @@ Request Body:
 }
 ```
 
+#### Update Profile
+
+```
+PUT /api/v1/auth/me
+Auth: Bearer {access_token}
+
+Request Body:
+{
+    "name": "string",
+    "avatar_url": "string",
+    "bio": "string",
+    "phone": "string",
+    "preferences": "string"
+}
+
+Success Response (200):
+{
+    "success": true,
+    "data": {
+        "id": 1,
+        "name": "Nunu Nugraha",
+        "email": "nunu@gmail.com",
+        "avatar_url": "https://...",
+        "bio": "Flutter Developer",
+        "phone": "+62xxx",
+        "preferences": "{}",
+        "created_at": "2026-04-01T00:00:00Z"
+    }
+}
+```
+
+#### Upload Avatar
+
+```
+POST /api/v1/upload
+Auth: Bearer {access_token}
+Content-Type: multipart/form-data
+
+Form field: file (image)
+
+Success Response (200):
+{
+    "success": true,
+    "data": {
+        "url": "https://cdn.example.com/avatars/uuid.jpg"
+    }
+}
+```
+
+#### Get News Feed
+
+```
+GET /api/v1/news?page=1&limit=10&category_id=2
+Auth: Bearer {access_token}
+
+Success Response (200):
+{
+    "success": true,
+    "data": [ { Article objects } ],
+    "meta": { "total": 100, "page": 1, "limit": 10 }
+}
+```
+
+#### Get Categories
+
+```
+GET /api/v1/categories
+Auth: Bearer {access_token}
+
+Success Response (200):
+{
+    "success": true,
+    "data": [ { "id": 1, "name": "Teknologi", "slug": "teknologi" } ]
+}
+```
+
+#### Get Trending Articles
+
+```
+GET /api/v1/news/trending
+Auth: Bearer {access_token}
+```
+
+#### Get Article Detail
+
+```
+GET /api/v1/news/:slug
+Auth: Bearer {access_token}
+```
+
 ### 7.4 Endpoint Summary
 
 | Method | Endpoint | Auth | Purpose |
@@ -554,7 +725,13 @@ Request Body:
 | POST | `/api/v1/auth/login` | No | Authenticate user |
 | POST | `/api/v1/auth/refresh` | No | Rotate tokens |
 | GET | `/api/v1/auth/me` | Yes Bearer | Get user profile |
+| PUT | `/api/v1/auth/me` | Yes Bearer | Update user profile (name, avatar, bio, phone) |
 | POST | `/api/v1/auth/logout` | Yes Bearer | Invalidate session |
+| POST | `/api/v1/upload` | Yes Bearer | Upload avatar image (multipart) |
+| GET | `/api/v1/news` | Yes Bearer | Get paginated news feed (filter by category) |
+| GET | `/api/v1/categories` | Yes Bearer | Get list of categories |
+| GET | `/api/v1/news/trending` | Yes Bearer | Get trending articles |
+| GET | `/api/v1/news/:slug` | Yes Bearer | Get single article detail |
 
 ---
 
@@ -731,8 +908,9 @@ BlocProvider<AuthBloc>.value(
 | `AuthCheckRequested` | App start via splash | Cek token + validate via getProfile |
 | `AuthLoginRequested` | Login form submit | Email + password |
 | `AuthRegisterRequested` | Register form submit | Name + email + password |
-| `AuthProfileRequested` | Dashboard init | Fetch latest profile |
+| `AuthProfileRequested` | Dashboard/Profile init | Fetch latest profile |
 | `AuthLogoutRequested` | Logout button | Clear session |
+| `AuthUserUpdated` | `ProfileCubit` after successful profile update | Update global RAM state dengan User baru |
 
 **State:**
 
@@ -742,16 +920,36 @@ BlocProvider<AuthBloc>.value(
 | `user` | `User?` | Current user data |
 | `errorMessage` | `String?` | Error message for UI display |
 
-### 9.6 Future Feature BLoCs/Cubits
+### 9.6 Feature-Specific Cubits
 
-Feature-specific BLoCs/Cubits (e.g., `ExploreCubit`) akan di-provide di route level, bukan global:
+Semua News Cubits di-provide di `app_router.dart` pada route builder `/dashboard` menggunakan `MultiBlocProvider`, memastikan mereka fresh setiap kali `DashboardPage` dibuka:
+
+| Cubit | Tipe Registrasi | Scope | Purpose |
+|-------|----------------|-------|--------|
+| `AuthBloc` | `LazySingleton` | Global (MaterialApp) | Auth status + User entity |
+| `GlobalAlertBloc` | `LazySingleton` | Global (MaterialApp) | Network error intercept |
+| `CategoryCubit` | `Factory` | Dashboard route | Load kategori berita |
+| `NewsFeedCubit` | `Factory` | Dashboard route | Load & filter news feed |
+| `TrendingCubit` | `Factory` | Dashboard route | Load trending articles |
+| `SearchCubit` | `Factory` | Dashboard route | Search dengan debounce |
+| `ExploreCubit` | `Factory` | Dashboard route | Browse per kategori |
+| `BookmarkCubit` | `Factory` | Dashboard route | Manage bookmark state |
+| `ArticleDetailCubit` | `Factory` | `/article/:slug` route | Load detail + bookmark toggle |
+| `ProfileCubit` | `Factory` | `EditProfileBottomSheet` | Form state profil (ephemeral) |
 
 ```dart
-// Global for cross-cutting state
-BlocProvider<AuthBloc>.value(...)        // Global singleton
-
-// Feature-specific at route builder
-BlocProvider(create: (_) => sl<NewsBloc>())  // Not global, scoped
+// app_router.dart — /dashboard route
+MultiBlocProvider(
+  providers: [
+    BlocProvider(create: (_) => sl<CategoryCubit>()..load()),
+    BlocProvider(create: (_) => sl<TrendingCubit>()..load()),
+    BlocProvider(create: (_) => sl<NewsFeedCubit>()..load()),
+    BlocProvider(create: (_) => sl<SearchCubit>()),
+    BlocProvider(create: (_) => sl<ExploreCubit>()),
+    BlocProvider(create: (_) => sl<BookmarkCubit>()..loadBookmarks()),
+  ],
+  child: const DashboardPage(),
+)
 ```
 
 ---
@@ -963,10 +1161,21 @@ GoRouter(
 
 | Path | Page | Auth Required | Redirect Behavior |
 |------|------|---------------|-------------------|
-| `/splash` | `SplashPage` | - | -> `/login` if unauth, or `/dashboard` if auth |
-| `/login` | `LoginPage` | No | -> `/dashboard` if already authenticated |
-| `/register` | `RegisterPage` | No | -> `/dashboard` if already authenticated |
-| `/dashboard` | `DashboardPage` | Yes | -> `/login` if unauthenticated |
+| `/splash` | `SplashPage` | - | → `/login` if unauth, or `/dashboard` if auth |
+| `/login` | `LoginPage` | No | → `/dashboard` if already authenticated |
+| `/register` | `RegisterPage` | No | → `/dashboard` if already authenticated |
+| `/dashboard` | `DashboardPage` (Shell) | Yes | → `/login` if unauthenticated. Render: IndexedStack 5 tab |
+| `/article/:slug` | `NewsDetailPage` | Yes | Pushed on top of dashboard via `context.push()` |
+
+> [!NOTE]
+> `DashboardPage` adalah **shell/wrapper** yang menampung `BottomNavigationBar` dengan 5 tab:
+> - Tab 0: `NewsFeedPage` (Berita)
+> - Tab 1: `ExplorePage` (Jelajah)
+> - Tab 2: `NewsSearchPage` (Cari)
+> - Tab 3: `BookmarkPage` (Simpan)
+> - Tab 4: `ProfilePage` (Profil)
+>
+> `ProfilePage` tidak memiliki route tersendiri — ia di-render via `IndexedStack` di dalam `DashboardPage`.
 
 ### 13.3 Navigation Flow
 
@@ -1000,61 +1209,36 @@ App Start
                                     /login
 ```
 
-### 13.4 ShellRoute (Nested Navigation for Three Views)
+### 13.4 Dashboard Navigation (IndexedStack Pattern)
 
-Aplikasi memiliki fitur navigasi **Stateful Nested Navigation** menggunakan struktur canggih `StatefulShellRoute` dari GoRouter, yang memecah satu halaman rute raksasa (Dashboard) ke dalam "Tiga Cabang / _Three Views_" yang mandiri.
-
-Pola ini menjamin _State Preservation_ (scroll posisi, teks input, dan bloc state) dipertahankan utuh meski user berpindah-pindah tab. Flow navigasinya adalah sebagai berikut:
+Implementasi navigasi `DashboardPage` menggunakan **`IndexedStack` + `BottomNavigationBar`** (bukan `StatefulShellRoute`). Semua 5 halaman tab di-instantiate sekaligus dan disimpan dalam stack; perpindahan tab hanya mengubah `_currentIndex` sehingga state (scroll position, cubit state) tetap dipertahankan.
 
 ```mermaid
 graph TD
-    Root["Root Layout (MaterialApp.router)"]
+    Router["GoRouter: '/dashboard'"] --> MultiBlocProvider
+    MultiBlocProvider --> DashboardPage["DashboardPage (Shell)"]
     
-    subgraph GoRouter["GoRouter Config"]
-        Dashboard["StatefulShellRoute: '/dashboard'"]
-    end
-    
-    subgraph Scaffold["UI Scaffold (DashboardPage)"]
-        AppBar["Global Top AppBar"]
-        ContentArea["Shell Content Area (Offstage Router)"]
-        BottomNav["BottomNavigationBar (3 Tabs)"]
-        
-        Dashboard --> AppBar
-        Dashboard --> ContentArea
-        Dashboard --> BottomNav
+    subgraph DashboardPage
+        IndexedStack["IndexedStack (_currentIndex)"]
+        BottomNav["BottomNavigationBar (5 items)"]
     end
     
-    subgraph Branch1["Branch 1 (Tab 0)"]
-        RouterTab0["StatefulShellBranch 1"]
-        NewsPage["NewsFeedPage"]
-        RouterTab0 --> NewsPage
-    end
-
-    subgraph Branch2["Branch 2 (Tab 1)"]
-        RouterTab1["StatefulShellBranch 2"]
-        ExplorePage["ExplorePage"]
-        RouterTab1 --> ExplorePage
-    end
-
-    subgraph Branch3["Branch 3 (Tab 2)"]
-        RouterTab2["StatefulShellBranch 3"]
-        BookmarkPage["BookmarkPage"]
-        RouterTab2 --> BookmarkPage
-    end
-
-    %% Internal Router Logic
-    ContentArea -.->|Index 0| RouterTab0
-    ContentArea -.->|Index 1| RouterTab1
-    ContentArea -.->|Index 2| RouterTab2
-
-    %% Sub-Routing (Child Routes)
-    DeepLinkNews["ArticleDetailPage ('/article/:slug')"]
-    NewsPage -- "context.push()" --> DeepLinkNews
-    ExplorePage -- "context.push()" --> DeepLinkNews
-    BookmarkPage -- "context.push()" --> DeepLinkNews
+    DashboardPage --> IndexedStack
+    DashboardPage --> BottomNav
     
-    classDef branch fill:#f9f5ff,stroke:#8a2be2,stroke-width:2px;
-    class RouterTab0,RouterTab1,RouterTab2 branch;
+    IndexedStack -->|Index 0| NewsFeedPage
+    IndexedStack -->|Index 1| ExplorePage
+    IndexedStack -->|Index 2| NewsSearchPage
+    IndexedStack -->|Index 3| BookmarkPage
+    IndexedStack -->|Index 4| ProfilePage
+    
+    NewsFeedPage -- "context.push('/article/:slug')" --> NewsDetailPage
+    ExplorePage -- "context.push('/article/:slug')" --> NewsDetailPage
+    BookmarkPage -- "context.push('/article/:slug')" --> NewsDetailPage
+    
+    ProfilePage -- "showModalBottomSheet" --> EditProfileBottomSheet
+    EditProfileBottomSheet --> ProfileCubit["ProfileCubit (ephemeral)"]
+    ProfileCubit -- "AuthUserUpdated" --> AuthBloc["AuthBloc (global)"]
 ```
 
 ### 13.5 Panduan Metode Navigasi (GoRouter API)
@@ -1103,20 +1287,44 @@ Sistem menggunakan strategi registrasi spesifik berdasarkan sifat *state* dari m
 graph TD
     FSS["FlutterSecureStorage"] --> LocalDS["AuthLocalDatasource"]
     SP["SharedPreferences"] --> LocalDS
+    SP --> NewsLocalDS["NewsLocalDatasource"]
     LocalDS --> TP["TokenProvider"]
     TP --> AC["ApiClient"]
     AC --> RemoteDS["AuthRemoteDatasource"]
-    RemoteDS --> Repo["AuthRepository"]
-    LocalDS --> Repo
-    Repo --> LoginUC["LoginUseCase"]
-    Repo --> RegisterUC["RegisterUseCase"]
-    Repo --> ProfileUC["GetProfileUseCase"]
-    Repo --> LogoutUC["LogoutUseCase"]
-    LoginUC --> Bloc["AuthBloc"]
-    RegisterUC --> Bloc
-    ProfileUC --> Bloc
-    LogoutUC --> Bloc
-    Repo --> Bloc
+    AC --> NewsRemoteDS["NewsRemoteDatasource"]
+    AC --> GAB["GlobalAlertBloc"]
+    RemoteDS --> AuthRepo["AuthRepository"]
+    LocalDS --> AuthRepo
+    NewsRemoteDS --> NewsRepo["NewsRepository"]
+    NewsLocalDS --> NewsRepo
+    AuthRepo --> LoginUC["LoginUseCase"]
+    AuthRepo --> RegisterUC["RegisterUseCase"]
+    AuthRepo --> ProfileUC["GetProfileUseCase"]
+    AuthRepo --> UpdateUC["UpdateProfileUseCase"]
+    AuthRepo --> LogoutUC["LogoutUseCase"]
+    LoginUC --> AuthBloc["AuthBloc"]
+    RegisterUC --> AuthBloc
+    ProfileUC --> AuthBloc
+    LogoutUC --> AuthBloc
+    AuthRepo --> AuthBloc
+    UpdateUC --> ProfileCubit["ProfileCubit (Factory)"]
+    AC --> ProfileCubit
+    NewsRepo --> GetCatUC["GetCategoriesUseCase"]
+    NewsRepo --> GetFeedUC["GetNewsFeedUseCase"]
+    NewsRepo --> GetArtUC["GetArticleUseCase"]
+    NewsRepo --> GetBmkUC["GetBookmarksUseCase"]
+    NewsRepo --> ToggleBmkUC["ToggleBookmarkUseCase"]
+    NewsRepo --> CheckBmkUC["CheckBookmarkStatusUseCase"]
+    GetCatUC --> CategoryCubit["CategoryCubit (Factory)"]
+    GetFeedUC --> NewsFeedCubit["NewsFeedCubit (Factory)"]
+    GetFeedUC --> TrendingCubit["TrendingCubit (Factory)"]
+    GetFeedUC --> ExploreCubit["ExploreCubit (Factory)"]
+    GetFeedUC --> SearchCubit["SearchCubit (Factory)"]
+    GetBmkUC --> BookmarkCubit["BookmarkCubit (Factory)"]
+    ToggleBmkUC --> BookmarkCubit
+    GetArtUC --> ArticleDetailCubit["ArticleDetailCubit (Factory)"]
+    ToggleBmkUC --> ArticleDetailCubit
+    CheckBmkUC --> ArticleDetailCubit
 ```
 
 ---
@@ -1157,12 +1365,19 @@ graph TD
 
 ### 15.4 Pages
 
-| Page | Key Components |
-|------|---------------|
-| **Splash** | Logo + fade/scale animation, triggers auth check |
-| **Login** | Email + password fields, gradient CTA button, slide-up animation |
-| **Register** | Name + email + password + confirm password, same styling |
-| **Dashboard** | Greeting header, profile card, stat cards, action tiles, logout with confirmation dialog |
+| Page | Route / Placement | Key Components |
+|------|-------------------|---------------|
+| **SplashPage** | `/splash` | Logo + fade/scale animation, triggers `AuthCheckRequested` |
+| **LoginPage** | `/login` | Email + password fields, gradient CTA button, slide-up animation |
+| **RegisterPage** | `/register` | Name + email + password + confirm password |
+| **DashboardPage** | `/dashboard` (shell) | `IndexedStack` + `BottomNavigationBar` 5 tab |
+| **NewsFeedPage** | Tab 0 | Category filter chips, trending section, article list dengan pull-to-refresh |
+| **ExplorePage** | Tab 1 | Browse artikel per kategori dengan pagination |
+| **NewsSearchPage** | Tab 2 | Search bar dengan debounce, hasil pencarian |
+| **BookmarkPage** | Tab 3 | Daftar artikel tersimpan dari local cache |
+| **ProfilePage** | Tab 4 | Avatar, nama, bio, phone info; trigger `EditProfileBottomSheet` |
+| **NewsDetailPage** | `/article/:slug` (pushed) | Full article reader, bookmark toggle button |
+| **EditProfileBottomSheet** | Modal (from ProfilePage) | Borderless fields untuk name, bio, phone, avatar upload |
 
 ---
 
@@ -1190,14 +1405,34 @@ Proyek ini mewajibkan **3 Jalur Pengujian (Paths)** untuk seluruh *layer* agar m
 
 ### 16.3 Unit Test Targets
 
-| Component | What to Test |
-|-----------|-------------|
-| **Local Datasource** | Proses *Write*, *Read*, dan *Edge Path* (Partial Cache / JSON null). |
-| **Remote Datasource** | Panggilan *ApiClient*, transisi respon HTTP jadi Model. |
-| **Repository** | *Exception* catching menjadi *Failure*, Fallback ke Cache Lokal saat Server offline (Edge case). |
-| **UseCases** | *Return Integrity* & *Forwarding* parameter. |
-| **BLoC** | Transisi *Event* -> *State* secara berurutan, penanganan *Chaining Event* terputus. |
-| **ApiClient** | Pemetaan *DioException* mutlak menjadi *ServerException*. |
+| Component | What to Test | Status |
+|-----------|-------------|--------|
+| **Local Datasource** | Write, Read, Edge Path (Partial Cache / JSON null) | ❓ Partial |
+| **Remote Datasource** | Panggilan ApiClient, transformasi HTTP → Model | ❓ Partial |
+| **Auth Repository** | Exception → Failure, Fallback cache saat offline | ❓ Partial |
+| **Auth UseCases** | Return Integrity & parameter forwarding | ❓ Partial |
+| **AuthBloc** | Event → State transitions, chaining events | ✅ `auth_bloc_test.dart` |
+| **ApiClient** | DioException → ServerException mapping | ❌ Belum ada |
+| **ProfileCubit** | Update flow, loading state, error state, AuthUserUpdated dispatch | ❌ Belum ada |
+| **CategoryCubit** | Load, error, empty state | ❌ Belum ada |
+| **NewsFeedCubit** | Load, filter, refresh, error | ❌ Belum ada |
+| **BookmarkCubit** | Toggle, optimistic update, load | ❌ Belum ada |
+| **News Repository** | Feed cache fallback, bookmark CRUD | ❌ Belum ada |
+
+### 16.4 Cara Menjalankan Test
+
+```bash
+# Run all tests
+flutter test
+
+# Run with coverage
+flutter test --coverage
+
+# Run specific file
+flutter test test/features/auth/presentation/bloc/auth_bloc_test.dart
+```
+
+**Coverage target:** minimal 80% pada Domain + BLoC/Cubit layer.
 
 ### 16.3 Mocking Strategy
 
@@ -1260,32 +1495,30 @@ Aplikasi telah dilengkapi dengan perlindungan standar rilis produksi pada level 
 
 ---
 
-## 18. Profile Management Expansion (Updated 2026-04-02)
+## 18. Profile Management
 
-### 18.1 Architecture Strategy (Global + Local BLoC Hybrid)
-To implement a robust Profile Management system where the user can update their Avatar, Bio, and Preferences, the application employs a hybrid State Management approach:
+### 18.1 User Entity Fields
 
-1. **Global Provider (`AuthBloc`)**
-   Serves as the Single Source of Truth for the `User` object (via `AuthState.user`). Used for instantly fetching profile pictures rendering globally across UI spaces like the App Bar or Menu Drawer (retrieves the cached state straight from RAM instead of network or disk requests).
-2. **Local Provider (`ProfileCubit`)**
-   Instantiated specifically for the `EditProfilePage`. Manages local transient form state instances (`isFormSubmitting`, validation text errors).
-3. **Data Delegation/Syncing**
-   After successfully dispatching a `PUT /profile` request locally within the `ProfileCubit`, the cubit propagates a `UserUpdated` event payload into the Global `AuthBloc`, assuring seamless silent-recompilation of dependent UI components.
+Entity `User` telah di-expand untuk mendukung profile management penuh:
 
-### 18.2 UI Characteristics
-* Leverages aesthetic premium bottom-sheets alongside modern, borderless TextField elements to conform with the application's clean design ethos.
+```dart
+class User extends Equatable {
+  final int id;
+  final String name;
+  final String email;
+  final String avatarUrl;     // URL CDN dari endpoint /upload
+  final String bio;           // Deskripsi singkat user
+  final String phone;         // Nomor HP
+  final String preferences;   // JSON string untuk app settings
+  final DateTime? createdAt;
+}
+```
 
----
+### 18.2 Architecture Strategy (Global + Local BLoC Hybrid)
 
-*End of Technical Requirements Document*
-
-### 9.6 Global-Local Hybrid State Strategy (Profile Management)
-
-Sistem profil menggunakan pola **Global-Local Hybrid BLoC**. Ini memecahkan dua masalah:
-1. Menghindari terlalu banyak fetch API jika kita tidak menyimpan datanya global.
-2. Mencegah kebocoran RAM/Memory leak jika state Form/Loading dari halaman Edit Profile di-keep di Global.
-
-#### Diagram Interaksi (Tree & Flow)
+Sistem profil menggunakan pola **Global-Local Hybrid BLoC** untuk memecahkan dua masalah sekaligus:
+1. Menghindari terlalu banyak fetch API karena data tersimpan global di RAM.
+2. Mencegah memory leak — state form Edit Profile tidak disimpan di Global BLoC.
 
 ```mermaid
 graph TD
@@ -1296,47 +1529,56 @@ graph TD
     Main[main.dart - Root]:::ui -->|Injects Global| Auth[AuthBloc - Global Source of Truth]:::global
     
     Auth --> AppRouter[AppRouter]:::ui
-    AppRouter --> Dashboard[NewsFeedPage]:::ui
-    AppRouter --> Profile[ProfilePage]:::ui
+    AppRouter --> Dashboard[DashboardPage / Shell]:::ui
     
-    Dashboard -->|Reads from RAM| Auth
-    Profile -->|Reads from RAM| Auth
+    Dashboard -->|Tab 0 - Reads User| NewsFeed[NewsFeedPage]:::ui
+    Dashboard -->|Tab 4 - Reads User| Profile[ProfilePage]:::ui
     
     Profile -->|Action: onTap Edit| BottomSheet[EditProfileBottomSheet]:::ui
-    
     BottomSheet -->|Creates Ephemeral instance| Cubit[ProfileCubit - Local Form Manager]:::local
     
-    Cubit -->|1. Request API| API[PUT /auth/me]
-    API -.->|2. Success Response| Cubit
+    Cubit -->|1. Upload avatar POST /upload| CDN[CDN URL]
+    Cubit -->|2. Update profile PUT /auth/me| API[Backend API]
+    API -.->|3. Success Response| Cubit
     
-    Cubit -.->|3. Dipatch Event| Event[AuthUserUpdated Event]
-    Event -.->|4. Updates Global RAM state| Auth
-    
-    Auth -.->|5. Auto-renders changes| Profile
-    Auth -.->|5. Auto-renders changes| Dashboard
+    Cubit -.->|4. Dispatch AuthUserUpdated| Auth
+    Auth -.->|5. Auto-renders| Profile
+    Auth -.->|5. Auto-renders| NewsFeed
     
     BottomSheet -.->|6. Dispose on Close| Cubit
 ```
 
-#### Alur Komunikasi (Publisher-Subscriber)
+#### Alur Komunikasi
 1. **Source of Truth**: `AuthBloc` (Global) meng-host entity `User` di RAM.
-2. **Pembaca Data (Subscriber)**: `ProfilePage` & `NewsFeedPage` me-render profil dengan membaca cache memori dari `AuthBloc` (Tidak pernah call API `getProfile` lag saat navigasi layar).
-3. **Pekerja Form (Local)**: `ProfileCubit` dan `EditProfileBottomSheet` di-inisialisasi secara independen dan sementara (ephemeral). Bertugas mengatur life-cycle seperti proses upload gambar, loading spinner, handle validasi form.
-4. **Jembatan Sinkronisasi**: Begitu `ProfileCubit` sukses mengirim data ke server, dia bertindak menjembatani perubahan tersebut ke *Global State* dengan perintah:
-`context.read<AuthBloc>().add(AuthUserUpdated(state.updatedUser))`
-6. **Zero Memory Footprint**: Form `ProfileCubit` dihancurkan (garbage collected) setelah lembar sheet ditutup.
+2. **Pembaca Data**: `ProfilePage` & `NewsFeedPage` me-render profil dari `AuthBloc` — tidak pernah call API saat navigasi tab.
+3. **Pekerja Form (Local)**: `ProfileCubit` + `EditProfileBottomSheet` bersifat ephemeral — mengurus upload gambar, loading spinner, validasi form.
+4. **Jembatan Sinkronisasi**: Setelah `ProfileCubit` sukses, dia dispatch event ke Global BLoC:
+   ```dart
+   context.read<AuthBloc>().add(AuthUserUpdated(updatedUser));
+   ```
+5. **Zero Memory Footprint**: `ProfileCubit` di-dispose otomatis saat bottom sheet ditutup.
+
+### 18.3 UI Characteristics
+- Premium bottom sheet dengan borderless `TextField`
+- Avatar picker dengan image upload ke `/api/v1/upload`
+- Loading state pada tombol Save
+- Animasi smooth open/close bottom sheet
 
 ---
 
-## 18. Feature Modules
+## 19. Feature Modules
 
-Dalam upaya menjaga TRD ini agar tidak menjadi terlalu besar (Monolithic), implementasi spesifik dari berbagai modul diletakkan ke dalam panduan (_markdown_) sendiri di dalam folder `docs/features/`. 
+Dalam upaya menjaga TRD ini agar tidak menjadi terlalu besar (Monolithic), implementasi spesifik dari berbagai modul diletakkan ke dalam panduan (_markdown_) sendiri di dalam folder `docs/features/`.
 
 Dokumen induk (TRD) ini bertindak sebagai Blueprint Global Arsitektur & Aturan Main, sementara fungsi fitur-fiturnya diurus dalam file spesifik berikut:
 
-| Feature Name | Document Resource | Description |
-|--------------|-------------------|-------------|
-| **Auth** | [features/auth.md](features/auth.md) | Otentikasi, Splash Screen, Storage Token. |
-| **News & Explore** | [features/news_explore.md](features/news_explore.md) | Dashboard, Explore Page, API Feed aggregator. |
-| **Bookmarks** | [features/bookmarks.md](features/bookmarks.md) | Layar Bookmark, _Optimistic updating_. |
-| **Search** | [features/search.md](features/search.md) | Pencarian dengan Pagination & Debounce. |
+| Feature Name | Document Resource | Description | Status |
+|--------------|-------------------|-------------|--------|
+| **Auth** | [features/auth.md](features/auth.md) | Otentikasi, Splash Screen, Storage Token | ✅ Done |
+| **News & Explore** | [features/news_explore.md](features/news_explore.md) | News Feed, Explore Page, API Feed aggregator | ✅ Done |
+| **Bookmarks** | [features/bookmarks.md](features/bookmarks.md) | Layar Bookmark, Optimistic updating | ✅ Done |
+| **Search** | [features/search.md](features/search.md) | Pencarian dengan Pagination & Debounce | ✅ Done |
+
+---
+
+*End of Technical Requirements Document*
