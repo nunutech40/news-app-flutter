@@ -1407,17 +1407,27 @@ Proyek ini mewajibkan **3 Jalur Pengujian (Paths)** untuk seluruh *layer* agar m
 
 | Component | What to Test | Status |
 |-----------|-------------|--------|
-| **Local Datasource** | Write, Read, Edge Path (Partial Cache / JSON null) | ❓ Partial |
-| **Remote Datasource** | Panggilan ApiClient, transformasi HTTP → Model | ❓ Partial |
-| **Auth Repository** | Exception → Failure, Fallback cache saat offline | ❓ Partial |
-| **Auth UseCases** | Return Integrity & parameter forwarding | ❓ Partial |
+| **Auth Local Datasource** | Write, Read, Edge Path (Partial Cache / JSON null) | ✅ `auth_local_datasource_test.dart` |
+| **Auth Remote Datasource** | Panggilan ApiClient, transformasi HTTP → Model | ✅ `auth_remote_datasource_test.dart` |
+| **Auth Repository** | Exception → Failure, Fallback cache saat offline | ✅ `auth_repository_impl_test.dart` |
+| **Auth UseCases** | Return Integrity & parameter forwarding | ✅ `login/register/logout/get_profile/update_profile_usecase_test.dart` |
 | **AuthBloc** | Event → State transitions, chaining events | ✅ `auth_bloc_test.dart` |
-| **ApiClient** | DioException → ServerException mapping | ❌ Belum ada |
-| **ProfileCubit** | Update flow, loading state, error state, AuthUserUpdated dispatch | ❌ Belum ada |
-| **CategoryCubit** | Load, error, empty state | ❌ Belum ada |
-| **NewsFeedCubit** | Load, filter, refresh, error | ❌ Belum ada |
-| **BookmarkCubit** | Toggle, optimistic update, load | ❌ Belum ada |
-| **News Repository** | Feed cache fallback, bookmark CRUD | ❌ Belum ada |
+| **ProfileCubit** | Update flow, loading state, error state, AuthUserUpdated dispatch | ✅ `profile_cubit_test.dart` |
+| **ApiClient** | DioException → ServerException mapping | ✅ `api_client_test.dart` |
+| **AuthInterceptor** | Token inject, refresh lock, race condition | ✅ `auth_interceptor_test.dart` |
+| **News Local Datasource** | Bookmark CRUD, feed cache read/write | ✅ `news_local_datasource_test.dart` |
+| **News Remote Datasource** | getFeed, getCategories, getArticle | ✅ `news_remote_datasource_test.dart` |
+| **News Repository** | Feed cache fallback, bookmark CRUD | ✅ `news_repository_impl_test.dart` |
+| **News UseCases** | GetFeed, GetCategories, GetArticle, Bookmark, Toggle, Check | ✅ `*_usecase_test.dart` (6 files) |
+| **CategoryCubit** | Load, error, empty state | ✅ `category_cubit_test.dart` |
+| **NewsFeedCubit** | Load, filter, refresh, error, pagination | ✅ `news_feed_cubit_test.dart` |
+| **TrendingCubit** | Load, error | ✅ `trending_cubit_test.dart` |
+| **ExploreCubit** | Parallel load, staggered emit | ✅ `explore_cubit_test.dart` |
+| **SearchCubit** | Search, debounce guard, loadMore, race condition | ✅ `search_cubit_test.dart` |
+| **BookmarkCubit** | Toggle, load, optimistic update | ✅ `bookmark_cubit_test.dart` |
+| **ArticleDetailCubit** | Load detail, bookmark toggle | ✅ `article_detail_cubit_test.dart` |
+| **Article Entity** | displayImage getter, equality | ✅ `article_test.dart` |
+| **Utilities** | DateHelper, Validators | ✅ `date_helper_test.dart`, `validators_test.dart` |
 
 ### 16.4 Cara Menjalankan Test
 
