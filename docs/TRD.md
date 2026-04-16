@@ -972,6 +972,77 @@ MultiBlocProvider(
 )
 ```
 
+### 9.8 Peta Hierarki BLoC (Visual Graph)
+
+Untuk memperjelas pemahaman mengenai lapisan (scope) mana saja setiap BLoC hidup dan mati, berikut adalah grafiknya:
+
+```mermaid
+graph TD
+    %% Global Level
+    subgraph Root["Level 1: Akar Aplikasi (Global Singleton)"]
+        direction TB
+        app["📱 MaterialApp\n(Nyala Sepanjang App Hidup)"]
+        auth["🛡️ AuthBloc\n(Data Profil & Keamanan)"]
+        alert["⚠️ GlobalAlertBloc\n(Peringatan Error Lintas Layar)"]
+        app -.->|Provide| auth
+        app -.->|Provide| alert
+    end
+
+    %% Routing Level
+    subgraph Nav["Level 2: Penjaga Rute (Router Guard)"]
+        router["🚦 GoRouter"]
+        auth -.->|Disadap (Listen)| router
+    end
+
+    %% Branch/Route Level
+    subgraph Dash["Level 3: Rute Cabang Utama (Factory)"]
+        direction TB
+        dash["🏠 Dashboard Route\n(Mati Jika Logout)"]
+        router -->|Navigasi| dash
+        
+        nc["NewsFeedCubit"]
+        cc["CategoryCubit"]
+        tc["TrendingCubit"]
+        bc["BookmarkCubit"]
+        sc["SearchCubit"]
+        ec["ExploreCubit"]
+        
+        dash -.->|Provide| nc
+        dash -.->|Provide| cc
+        dash -.->|Provide| tc
+        dash -.->|Provide| bc
+        dash -.->|Provide| sc
+        dash -.->|Provide| ec
+    end
+
+    %% Sub-Branch Level
+    subgraph Detail["Level 3.1: Rute Tumpuk (Ephemeral)"]
+        detail["📄 Article Detail Page\n(/article/:slug)"]
+        router -->|Push Route| detail
+        adc["ArticleDetailCubit\n(Mati Saat Tombol Back)"]
+        detail -.->|Provide| adc
+    end
+    
+    %% Ephemeral/Widget Local Level
+    subgraph Ephemeral["Level 4: Widget Sub-Lokal"]
+        bottomsheet["⚙️ BottomSheet Edit Profil"]
+        dash -->|Pop Up| bottomsheet
+        pc["ProfileCubit\n(Mati Saat Pop-Up Ditutup)"]
+        bottomsheet -.->|Provide| pc
+    end
+
+    %% Styling
+    classDef global fill:#1976D2,stroke:#0D47A1,color:#fff;
+    classDef route fill:#388E3C,stroke:#1B5E20,color:#fff;
+    classDef emph fill:#7B1FA2,stroke:#4A148C,color:#fff;
+    classDef local fill:#F57C00,stroke:#E65100,color:#fff;
+
+    class auth,alert global;
+    class nc,cc,tc,bc,sc,ec route;
+    class adc emph;
+    class pc local;
+```
+
 ---
 
 ## 10. Storage Strategy
