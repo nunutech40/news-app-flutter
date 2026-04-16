@@ -838,7 +838,21 @@ class UnauthorizedFailure extends Failure { ... }
 
 ## 9. State Management Strategy
 
-### 9.1 BLoC Pattern
+### 9.1 Pengantar State Management
+
+**Apa itu State Management dan Kenapa Dibutuhkan?**
+*State* adalah kondisi data kotor yang digunakan oleh komponen UI pada saat tertentu (contoh: status *loading*, keranjang tersimpan, token API aktif). Seiring bertambahnya kompleksitas, puluhan *state* tersebar dan wajib dibagikan ke lintas-layar secara sinkron. *State Management* adalah sebuah cara untuk mengelola ruang penyimpanan data-data tersebut agar antarmuka (*UI*) dapat mengetahui kapan harus bereaksi/menggambar ulang dirinya secara terpusat. Hal ini memusnahkan keharusan melempar properti data secara serah-terima manual antar ratusan widget (yang sering memicu *Spaghetti Code*).
+
+**Pendekatan Default Flutter (`setState`)**
+Flutter sejatinya memilik mekanisme primitif bernama `setState`. Pendekatan ini hanya bagus untuk skop pergerakan murni lokal yang terisolasi di dalam *satu Class Widget* (misal: merubah warna tombol dan menutup panel). Mengeksploitasi `setState` bagi pergerakan jaringan (spt meletakan fungsi pengambilan API di dalam UI dan mengubah *state*-nya) akan melanggar *Clean Architecture*. Selain mencampuradukkan kode presentasi murni dengan pengambilan data yang menghancurkan struktur *unit-testing*, cara bawaan ini kerap menyebabkan *re-render* / gambar ulang brutal yang tak efisien pada komponen yang tidak terlibat.
+
+**Mengapa Memilih BLoC (Business Logic Component)?**
+Proyek ini mengadopsi pilar state management populer Flutter yakni BLoC karena alasan berikut:
+1. **Pemisahan Super Tegas**: Konsep "UI is Dumb". UI murni berfokus mendikte tata letak, logika komputasi kompleks dipaksa terisolasi di file BLoC yang tidak mengenal bahasa UI.
+2. **Keterlacakan (Traceability Event-Driven)**: Alih-alih fungsi dipanggil diam-diam, BLoC bekerja via lemparan **Event**. Developer lebih mudah melacak "Mengapa State Error terjadi pada detik ketiga?" -> Karena baru saja dilempar "Event Network Failed".
+3. **Kepatuhan TDD dan Domain Layer**: BLoC berfungsi layaknya "penerjemah akhir", menyerap return pasif `Either<Failure, T>` dari perlintasan Domain-Layer lalu merubahnya menjadi representasi *State Reaktif* (contoh: Failure = `ErrorState`, Right(data) = `LoadedState`).
+
+### 9.2 BLoC Pattern
 
 ```
 UI --(Event)--> BLoC --(UseCase)--> Repository
@@ -846,7 +860,7 @@ UI --(Event)--> BLoC --(UseCase)--> Repository
                   +--(State)--> UI rebuilds
 ```
 
-### 9.2 BLoC vs Cubit Guidelines
+### 9.3 BLoC vs Cubit Guidelines
 
 Dalam proyek ini, kita mengkombinasikan penggunaan **BLoC** (dengan Event) dan **Cubit** (tanpa Event) secara spesifik tergantung pada kompleksitas logika.
 
@@ -860,7 +874,7 @@ Kapanpun cukup menggunakan pemanggilan fungsi sederhana yang linier ke API atau 
 
 **Aturan Emas:** *Mulailah dengan Cubit secara default. Promosikan ia menjadi BLoC hanya apabila state logic menyertakan rute alur reaktif/event stream processing tingkat lanjut.*
 
-### 9.3 Auth BLoC - Global Singleton
+### 9.4 Auth BLoC - Global Singleton
 
 Auth BLoC di-provide di **level `MaterialApp`** karena digunakan di:
 - `GoRouter` redirect, navigasi otomatis berdasarkan auth state
@@ -876,7 +890,7 @@ BlocProvider<AuthBloc>.value(
 )
 ```
 
-### 9.4 Auth State Machine
+### 9.5 Auth State Machine
 
 ```
                      +--------+
@@ -899,7 +913,7 @@ BlocProvider<AuthBloc>.value(
    +----------+ +------+   +---------+
 ```
 
-### 9.5 Events and State
+### 9.6 Events and State
 
 **Events:**
 
@@ -920,7 +934,7 @@ BlocProvider<AuthBloc>.value(
 | `user` | `User?` | Current user data |
 | `errorMessage` | `String?` | Error message for UI display |
 
-### 9.6 Feature-Specific Cubits
+### 9.7 Feature-Specific Cubits
 
 Semua News Cubits di-provide di `app_router.dart` pada route builder `/dashboard` menggunakan `MultiBlocProvider`, memastikan mereka fresh setiap kali `DashboardPage` dibuka:
 
