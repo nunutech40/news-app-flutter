@@ -874,18 +874,25 @@ Kapanpun cukup menggunakan pemanggilan fungsi sederhana yang linier ke API atau 
 
 **Aturan Emas:** *Mulailah dengan Cubit secara default. Promosikan ia menjadi BLoC hanya apabila state logic menyertakan rute alur reaktif/event stream processing tingkat lanjut.*
 
-### 9.4 Auth BLoC - Global Singleton
+### 9.4 Auth BLoC - Global Singleton (Di Root/MaterialApp)
 
-Auth BLoC di-provide di **level `MaterialApp`** karena digunakan di:
-- `GoRouter` redirect, navigasi otomatis berdasarkan auth state
-- `AuthInterceptor`, token injection via `TokenProvider` indirectly
-- `DashboardPage`, tampilkan profil
-- Any future feature yang perlu auth status
+Berbeda dengan Cubit/BLoC fungsional lain (seperti `NewsFeedCubit` atau `CategoryCubit`) yang umurnya dibatasi dan hanya diinisialisasi ("di-provide") di layar/rute tempat mereka spesifik dipanggil, **AuthBloc justru ditarik secara eksplisit hingga ke level akar absolut (root) pada `MaterialApp`**.
+
+**Mengapa Ditarik Terpusat ke Root?**
+
+1. **Garda Navigasi Otomatis (Auth-Guard Redirection)**
+   Router utama aplikasi kita (`GoRouter`) dikonfigurasi untuk secara abadi "mencuri dengar" (*listen*) pada pergerakan state `AuthBloc`. Jika sewaktu-waktu (bahkan saat di *background*) interceptor menyadari token tidak tertolong dan state berubah paksa menjadi *Unauthenticated*, maka `GoRouter` yang berselimut di root akan seketika menyedot pengguna dan melemparnya kembali ke halaman `/login`, tak peduli sedalam apapun layar yang sedang dijangkau pengguna. Routing tingkat atas ini mustahil dilakukan jika AuthBloc tersembunyi di rute cabang bawah.
+
+2. **Dewa Payung Keamanan & Identitas Global**
+   Identitas (*UserModel* / Profil User) dari `AuthBloc` adalah informasi yang akan diakses oleh hampur seluruh sudut aplikasi. Dari merender nama di *Header Dashboard*, memunculkan *Avatar* di *Drawer*, hingga membubuhkan preferensi bahasa. Merooting-nya secara singleton memastikan sub-layar (*child widget*) manapun bisa memanggil `context.read<AuthBloc>()` seketika secara gratis tanpa redundansi pemanggilan ulang ke API.
+   
+3. **Injeksi Jaringan Siklus Tertutup**
+   `AuthBloc`, `ApiClient`, dan `AuthInterceptor` adalah sebuah relasi *symbiosis*. Kegagalan jaringan tingkat fatal (*401*) yang ditangkap oleh Interceptor Dio lapis bawaan akan menjebol pertahanan dan memicu pelemparan Event Logout ke `AuthBloc`. Konstruksi ini memutlakkan kebutuhan untuk meletakannya di lapis *Lifecycle* aplikasi paling luar.
 
 ```dart
 // main.dart
 BlocProvider<AuthBloc>.value(
-  value: sl<AuthBloc>(),    // Singleton dari GetIt
+  value: sl<AuthBloc>(),    // Singleton permanen dari pendaftar GetIt
   child: MaterialApp.router(...)
 )
 ```
