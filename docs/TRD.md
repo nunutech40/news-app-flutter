@@ -991,8 +991,9 @@ graph TD
     %% Routing Level
     subgraph Nav["Level 2: Penjaga Rute (Router Guard)"]
         router["🚦 GoRouter"]
-        auth -.->|Disadap (Listen)| router
+        auth -.->|Menyadap State| router
     end
+
 
     %% Branch/Route Level
     subgraph Dash["Level 3: Rute Cabang Utama (Factory)"]
