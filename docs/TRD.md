@@ -874,25 +874,24 @@ Kapanpun cukup menggunakan pemanggilan fungsi sederhana yang linier ke API atau 
 
 **Aturan Emas:** *Mulailah dengan Cubit secara default. Promosikan ia menjadi BLoC hanya apabila state logic menyertakan rute alur reaktif/event stream processing tingkat lanjut.*
 
-### 9.4 Auth BLoC - Global Singleton (Di Root/MaterialApp)
+### 9.4 BLoC Skala Global (Di Root/MaterialApp)
 
-Berbeda dengan Cubit/BLoC fungsional lain (seperti `NewsFeedCubit` atau `CategoryCubit`) yang umurnya dibatasi dan hanya diinisialisasi ("di-provide") di layar/rute tempat mereka spesifik dipanggil, **AuthBloc justru ditarik secara eksplisit hingga ke level akar absolut (root) pada `MaterialApp`**.
+Berbeda dengan Cubit abstrak/fungsional lain (seperti `NewsFeedCubit` atau `CategoryCubit`) yang umurnya dibatasi dan hanya diinisialisasi ("di-provide") di layar/rute tempat meraka dipanggil, dalam aplikasi ini terdapat **dua BLoC yang sengaja ditarik secara eksplisit hingga ke level akar absolut (root) pada `MaterialApp`**: yaitu **`AuthBloc`** dan **`GlobalAlertBloc`**.
 
-**Mengapa Ditarik Terpusat ke Root?**
+**1. Mengapa AuthBloc Ditarik ke Root?**
+* **Garda Navigasi Otomatis (Auth-Guard Redirection)**: Router utama kita (`GoRouter`) dikonfigurasi untuk secara abadi menyadap state `AuthBloc`. Jika sewaktu-waktu (bahkan saat memuat *background*) token kedaluwarsa dan berstatus *Unauthenticated*, maka GoRouter yang berselimut di lapis akar akan seketika menyedot pengguna kembali ke halaman `/login`, tanpa peduli sedalam apapun layar yang sedang dijangkau pengguna.
+* **Dewa Payung Keamanan & Identitas**: Identitas (Profil User) dari `AuthBloc` adalah data yang akan diakses hampir oleh seluruh sudut aplikasi (merender Avatar, Header, pengaturan). Me-rooting-nya secara *singleton* memastikan seluruh *child widget* bisa memanggil `context.read<AuthBloc>()` seketika secara gratis tanpa pemanggilan ulang API `/me`.
 
-1. **Garda Navigasi Otomatis (Auth-Guard Redirection)**
-   Router utama aplikasi kita (`GoRouter`) dikonfigurasi untuk secara abadi "mencuri dengar" (*listen*) pada pergerakan state `AuthBloc`. Jika sewaktu-waktu (bahkan saat di *background*) interceptor menyadari token tidak tertolong dan state berubah paksa menjadi *Unauthenticated*, maka `GoRouter` yang berselimut di root akan seketika menyedot pengguna dan melemparnya kembali ke halaman `/login`, tak peduli sedalam apapun layar yang sedang dijangkau pengguna. Routing tingkat atas ini mustahil dilakukan jika AuthBloc tersembunyi di rute cabang bawah.
-
-2. **Dewa Payung Keamanan & Identitas Global**
-   Identitas (*UserModel* / Profil User) dari `AuthBloc` adalah informasi yang akan diakses oleh hampur seluruh sudut aplikasi. Dari merender nama di *Header Dashboard*, memunculkan *Avatar* di *Drawer*, hingga membubuhkan preferensi bahasa. Merooting-nya secara singleton memastikan sub-layar (*child widget*) manapun bisa memanggil `context.read<AuthBloc>()` seketika secara gratis tanpa redundansi pemanggilan ulang ke API.
-   
-3. **Injeksi Jaringan Siklus Tertutup**
-   `AuthBloc`, `ApiClient`, dan `AuthInterceptor` adalah sebuah relasi *symbiosis*. Kegagalan jaringan tingkat fatal (*401*) yang ditangkap oleh Interceptor Dio lapis bawaan akan menjebol pertahanan dan memicu pelemparan Event Logout ke `AuthBloc`. Konstruksi ini memutlakkan kebutuhan untuk meletakannya di lapis *Lifecycle* aplikasi paling luar.
+**2. Mengapa GlobalAlertBloc Ditarik ke Root?**
+* **Penangkap Sinyal Error Jaringan Secara Universal**: Seringkali pengguna mendapat *Alert* error seperti "No Internet Connection" berbarengan dengan hancurnya layar atau terjadinya *Exception* di *background*. *GlobalAlertBloc* mendengarkan error di lapis Core jaringan tanpa pandang bulu di layar manapun error itu terjadi. Karena ditarik hingga root `MaterialApp`, ia bisa menampilkan antrean peringatan (SnackBar global) tepat di atas layar *apa pun* yang sedang aktif ditatap pengguna. Membatasinya di bawah sebuah rute hanya akan menyebabkan SnackBar Error tidak muncul jika *error* dipicu oleh modul silang.
 
 ```dart
 // main.dart
-BlocProvider<AuthBloc>.value(
-  value: sl<AuthBloc>(),    // Singleton permanen dari pendaftar GetIt
+MultiBlocProvider(
+  providers: [
+    BlocProvider<AuthBloc>.value(value: sl<AuthBloc>()),
+    BlocProvider<GlobalAlertBloc>.value(value: sl<GlobalAlertBloc>()),
+  ],
   child: MaterialApp.router(...)
 )
 ```
