@@ -124,9 +124,9 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    A([User pilih foto]) --> B[Main Thread\nSpinner ON]
-    B -->|compute()| C([Worker Isolate\ncrop + compress])
-    C -->|return path| D[Main Thread\nSpinner OFF]
+    A([User pilih foto]) --> B["Main Thread\nSpinner ON"]
+    B -- "compute()" --> C(["Worker Isolate\ncrop + compress"])
+    C -- "return path" --> D["Main Thread\nSpinner OFF"]
     D --> E([Tampil di UI])
 
     style C fill:#e1bee7,stroke:#8e24aa,color:#000
