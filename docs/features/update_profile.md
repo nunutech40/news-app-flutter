@@ -120,14 +120,14 @@ sequenceDiagram
 
 ## Flowchart: Image Processing Flow
 
-### Overview (Simple)
+### Overview
 
 ```mermaid
 flowchart LR
-    A([User pilih foto]) --> B[Main Thread]
+    A([Tap Kamera]) --> B[Main Thread]
     B -- "compute()" --> C([Worker Isolate])
-    C -- "return path" --> D[Main Thread]
-    D --> E([Tampil di UI])
+    C -- "path" --> D[Main Thread]
+    D --> E([Selesai])
 
     style B fill:#c8e6c9,stroke:#388e3c,color:#000
     style C fill:#e1bee7,stroke:#8e24aa,color:#000
@@ -138,31 +138,36 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    A([User tap kamera]) --> B["image_picker<br/>pickImage()"]
-    B --> C{File dipilih?}
+    A([Tap Kamera]) --> B[PickImage]
+    B --> C{Dipilih?}
     C -- Tidak --> Z([Batal])
-    C -- Ya --> D
-
-    D["Main Thread<br/>Spinner ON<br/>ImageProcessorHelper"] --> E
-
-    E["Worker Isolate<br/>compute()<br/>decode → crop 500px<br/>encode JPG 80%<br/>writeAsBytes"] --> F
-
-    F{Berhasil?}
-    F -- Ya --> G["_processed.jpg"]
-    F -- Error --> H["originalPath<br/>Fallback"]
-
-    G --> I
+    C -- Ya --> D[Spinner ON]
+    D --> E([Isolate])
+    E --> F{OK?}
+    F -- Ya --> G[Processed]
+    F -- Error --> H[Fallback]
+    G --> I[Render]
     H --> I
+    I --> Z2([Selesai])
 
-    I["Main Thread<br/>Spinner OFF<br/>CircleAvatar render"] --> Z2([Selesai])
-
-    classDef ui fill:#c8e6c9,stroke:#388e3c,stroke-width:2px,color:#000
-    classDef isolate fill:#e1bee7,stroke:#8e24aa,stroke-width:2px,color:#000
-    classDef success fill:#d4edda,stroke:#28a745,stroke-width:2px,color:#000
-    classDef fallback fill:#fff3cd,stroke:#f57c00,stroke-width:2px,color:#000
+    classDef ui fill:#c8e6c9,stroke:#388e3c,color:#000
+    classDef isolate fill:#e1bee7,stroke:#8e24aa,color:#000
+    classDef success fill:#d4edda,stroke:#28a745,color:#000
+    classDef fallback fill:#fff3cd,stroke:#f57c00,color:#000
 
     class B,D,I ui
     class E isolate
     class G success
     class H fallback
 ```
+
+**Keterangan node:**
+
+| Node | Teknologi | Keterangan |
+|---|---|---|
+| **PickImage** | `image_picker` | Buka galeri, ambil file resolusi penuh |
+| **Spinner ON** | `flutter/material.dart setState` | `_isProcessingImage = true` |
+| **Isolate** | `flutter/foundation.dart compute()` | `ImageProcessorHelper.compressAndCropSquare()` → decode → crop 500px → encode JPG 80% → `dart:io writeAsBytes` |
+| **Processed** | `dart:io File` | Gunakan `_processed.jpg` |
+| **Fallback** | `dart:io File` | Gunakan file asli jika Isolate error |
+| **Render** | `flutter/widgets.dart FileImage` | Tampil di `CircleAvatar` |
