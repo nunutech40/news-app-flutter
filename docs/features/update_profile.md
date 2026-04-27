@@ -124,36 +124,37 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    A([User pilih foto]) --> B["Main Thread\nSpinner ON"]
-    B -- "compute()" --> C(["Worker Isolate\ncrop + compress"])
-    C -- "return path" --> D["Main Thread\nSpinner OFF"]
+    A([User pilih foto]) --> B[Main Thread]
+    B -- "compute()" --> C([Worker Isolate])
+    C -- "return path" --> D[Main Thread]
     D --> E([Tampil di UI])
 
+    style B fill:#c8e6c9,stroke:#388e3c,color:#000
     style C fill:#e1bee7,stroke:#8e24aa,color:#000
+    style D fill:#c8e6c9,stroke:#388e3c,color:#000
 ```
 
 ### Detail
 
 ```mermaid
 flowchart TD
-    A([User tap ikon kamera]) --> B
-
-    B["image_picker: pickImage()"] --> C{File dipilih?}
+    A([User tap kamera]) --> B["image_picker<br/>pickImage()"]
+    B --> C{File dipilih?}
     C -- Tidak --> Z([Batal])
     C -- Ya --> D
 
-    D["Main Thread\nSpinner ON\nImageProcessorHelper.compressAndCropSquare()"] --> E
+    D["Main Thread<br/>Spinner ON<br/>ImageProcessorHelper"] --> E
 
-    E["Worker Isolate via compute()\npackage:image\ndecode → crop 500px → encode JPG 80%\ndart:io writeAsBytes → _processed.jpg"] --> F
+    E["Worker Isolate<br/>compute()<br/>decode → crop 500px<br/>encode JPG 80%<br/>writeAsBytes"] --> F
 
     F{Berhasil?}
-    F -- Ya --> G["File(_processed.jpg)"]
-    F -- null/Error --> H["File(originalPath) - Fallback"]
+    F -- Ya --> G["_processed.jpg"]
+    F -- Error --> H["originalPath<br/>Fallback"]
 
     G --> I
     H --> I
 
-    I["Main Thread\nSpinner OFF\nFileImage → CircleAvatar"] --> Z2([Selesai])
+    I["Main Thread<br/>Spinner OFF<br/>CircleAvatar render"] --> Z2([Selesai])
 
     classDef ui fill:#c8e6c9,stroke:#388e3c,stroke-width:2px,color:#000
     classDef isolate fill:#e1bee7,stroke:#8e24aa,stroke-width:2px,color:#000
