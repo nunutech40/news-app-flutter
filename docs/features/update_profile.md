@@ -128,31 +128,18 @@ flowchart TD
     C -- Tidak --> Z([Batal])
     C -- Ya --> D
 
-    D["setState\nisProcessingImage = true\nSpinner muncul"] --> E
+    D["setState: Spinner ON\nImageProcessorHelper\n.compressAndCropSquare()"] --> E
 
-    E["ImageProcessorHelper\n.compressAndCropSquare()"] --> F
+    E["dart:isolate compute()\ndecodeImage → cropSquare 500px\nencodeJpg 80% → writeAsBytes()"] --> F
 
-    F["compute()\ndart:isolate\nWorker lahir"] --> G
+    F{Berhasil?}
+    F -- Ya --> G["File(_processed.jpg)"]
+    F -- null/Error --> H["File(originalPath)\nFallback"]
 
-    G["dart:io File\nreadAsBytes()"] --> H
+    G --> I
+    H --> I
 
-    H["package:image\ndecodeImage()"] --> I
-
-    I["package:image\ncopyResizeCropSquare\nsize: 500px"] --> J
-
-    J["package:image\nencodeJpg\nquality: 80"] --> K
-
-    K["dart:io File\nwriteAsBytes()\n_processed.jpg"] --> L{Berhasil?}
-
-    L -- Ya --> M["File(_processed.jpg)"]
-    L -- Error/null --> N["File(originalPath)\nFallback"]
-
-    M --> O
-    N --> O
-
-    O["setState\nisProcessingImage = false"] --> P
-
-    P["FileImage\nCircleAvatar render"] --> Z2([Selesai])
+    I["setState: Spinner OFF\nFileImage → CircleAvatar"] --> Z2([Selesai])
 
     classDef ui fill:#c8e6c9,stroke:#388e3c,stroke-width:2px,color:#000
     classDef helper fill:#bbdefb,stroke:#1976d2,stroke-width:2px,color:#000
@@ -160,10 +147,8 @@ flowchart TD
     classDef success fill:#d4edda,stroke:#28a745,stroke-width:2px,color:#000
     classDef fallback fill:#fff3cd,stroke:#f57c00,stroke-width:2px,color:#000
 
-    class B,D,O,P ui
-    class E helper
-    class F,G,H,I,J,K isolate
-    class M success
-    class N fallback
+    class B,D,I ui
+    class E isolate
+    class G success
+    class H fallback
 ```
-
