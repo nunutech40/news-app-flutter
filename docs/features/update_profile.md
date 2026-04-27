@@ -118,31 +118,44 @@ sequenceDiagram
 
 ---
 
-## Flowchart: Image Picker & Fallback Logic
+## Flowchart: Image Processing Flow
+
+### Overview (Simple)
+
+```mermaid
+flowchart LR
+    A([User pilih foto]) --> B[Main Thread\nSpinner ON]
+    B -->|compute()| C([Worker Isolate\ncrop + compress])
+    C -->|return path| D[Main Thread\nSpinner OFF]
+    D --> E([Tampil di UI])
+
+    style C fill:#e1bee7,stroke:#8e24aa,color:#000
+```
+
+### Detail
 
 ```mermaid
 flowchart TD
     A([User tap ikon kamera]) --> B
 
-    B["image_picker\npickImage()"] --> C{File dipilih?}
+    B["image_picker: pickImage()"] --> C{File dipilih?}
     C -- Tidak --> Z([Batal])
     C -- Ya --> D
 
-    D["setState: Spinner ON\nImageProcessorHelper\n.compressAndCropSquare()"] --> E
+    D["Main Thread\nSpinner ON\nImageProcessorHelper.compressAndCropSquare()"] --> E
 
-    E["dart:isolate compute()\ndecodeImage → cropSquare 500px\nencodeJpg 80% → writeAsBytes()"] --> F
+    E["Worker Isolate via compute()\npackage:image\ndecode → crop 500px → encode JPG 80%\ndart:io writeAsBytes → _processed.jpg"] --> F
 
     F{Berhasil?}
     F -- Ya --> G["File(_processed.jpg)"]
-    F -- null/Error --> H["File(originalPath)\nFallback"]
+    F -- null/Error --> H["File(originalPath) - Fallback"]
 
     G --> I
     H --> I
 
-    I["setState: Spinner OFF\nFileImage → CircleAvatar"] --> Z2([Selesai])
+    I["Main Thread\nSpinner OFF\nFileImage → CircleAvatar"] --> Z2([Selesai])
 
     classDef ui fill:#c8e6c9,stroke:#388e3c,stroke-width:2px,color:#000
-    classDef helper fill:#bbdefb,stroke:#1976d2,stroke-width:2px,color:#000
     classDef isolate fill:#e1bee7,stroke:#8e24aa,stroke-width:2px,color:#000
     classDef success fill:#d4edda,stroke:#28a745,stroke-width:2px,color:#000
     classDef fallback fill:#fff3cd,stroke:#f57c00,stroke-width:2px,color:#000
