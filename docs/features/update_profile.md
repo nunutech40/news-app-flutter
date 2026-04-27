@@ -48,71 +48,71 @@ Diagram ini menjelaskan bagaimana UI mendelegasikan pemrosesan gambar ke `ImageP
 ```mermaid
 sequenceDiagram
     participant User
-    participant UI as EditProfileBottomSheet
-    participant Helper as ImageProcessorHelper (core/utils)
-    participant Worker as Worker Isolate (_processImageInIsolate)
-    participant Disk as Storage/File
+    participant UI as "UI: EditProfileBottomSheet"
+    participant Helper as "core/utils: ImageProcessorHelper"
+    participant Worker as "dart:isolate via compute()"
+    participant Disk as "dart:io File"
 
-    User->>UI: Klik icon kamera (Pick Image)
-    UI->>UI: Buka Galeri (ImagePicker, tanpa batasan ukuran)
-    UI-->>UI: File Gambar Asli (Bisa 10MB+)
-    
-    UI->>UI: setState(_isProcessingImage = true) - Munculkan Spinner
-    UI->>Helper: compressAndCropSquare(originalPath: filePath)
-    
-    Note over Helper,Worker: Helper membungkus params ke _ImageProcessParams DTO,<br/>lalu memanggil compute() sehingga Worker Isolate lahir.
-    
+    User->>UI: Tap ikon kamera
+    UI->>UI: image_picker.pickImage()
+    UI-->>UI: XFile path (resolusi penuh)
+
+    UI->>UI: setState isProcessingImage=true
+    Note over UI: flutter/material.dart setState
+    UI->>Helper: compressAndCropSquare(path)
+    Note over Helper: Bungkus ke _ImageProcessParams DTO
+
     Helper->>Worker: compute(_processImageInIsolate, params)
-    
-    Note over UI,Worker: Main Thread bebas mengurus UI (60 FPS)<br/>sementara Worker bekerja keras di Core CPU terpisah.
+    Note over Worker: flutter/foundation.dart compute()
+    Note over UI,Worker: Main Thread tetap 60 FPS
 
-    Worker->>Disk: readAsBytes() - Baca byte gambar mentah
-    Disk-->>Worker: Uint8List (raw bytes)
-    Worker->>Worker: img.decodeImage() - Decode ke pixel (CPU Berat)
-    Worker->>Worker: img.copyResizeCropSquare(size: 500) - Crop Square
-    Worker->>Worker: img.encodeJpg(quality: 80) - Kompres JPEG
-    Worker->>Disk: writeAsBytes() - Simpan ke _processed.jpg
-    Disk-->>Worker: Path file baru
-    
-    Worker-->>Helper: Return path (_processed.jpg) atau null jika error
-    Helper-->>UI: Return processedPath
-    
-    UI->>UI: setState(_isProcessingImage = false)
-    UI->>UI: Fallback - gunakan processedPath ?? originalPath
-    UI->>UI: Render ImageProvider - Tampilkan Avatar Baru
+    Worker->>Disk: File.readAsBytes()
+    Disk-->>Worker: Uint8List raw bytes
+    Worker->>Worker: image.decodeImage()
+    Worker->>Worker: image.copyResizeCropSquare(500)
+    Worker->>Worker: image.encodeJpg(quality:80)
+    Worker->>Disk: File.writeAsBytes()
+    Disk-->>Worker: String path _processed.jpg
+
+    Worker-->>Helper: return String? path
+    Helper-->>UI: return processedPath
+
+    UI->>UI: setState isProcessingImage=false
+    UI->>UI: File(processedPath ?? originalPath)
+    UI->>UI: Render FileImage di CircleAvatar
 ```
 
 ### 2. Profile Update & Global State Synchronization Flow
-Diagram ini menggambarkan siklus pengiriman data gambar + form ke server, dan bagaimana suksesnya _update_ tersebut disinkronkan ke `AuthBloc` global.
 
 ```mermaid
 sequenceDiagram
-    participant UI as EditProfileBottomSheet
-    participant Cubit as ProfileCubit
-    participant Repo as UserRepository
-    participant API as ApiClient
-    participant Auth as Global AuthBloc
+    participant UI as "UI: EditProfileBottomSheet"
+    participant Cubit as "flutter_bloc: ProfileCubit"
+    participant Repo as "Domain: UserRepository"
+    participant API as "dio: ApiClient (Multipart)"
+    participant Auth as "flutter_bloc: AuthBloc (Global)"
 
-    UI->>Cubit: saveProfile(name, file_processed, ...)
-    Cubit->>UI: emit(Loading)
-    
-    Cubit->>Repo: updateProfile(data, file)
-    Repo->>API: Multipart POST /user/profile
-    
-    alt Sukses
-        API-->>Repo: 200 OK + Updated User JSON
-        Repo-->>Cubit: Updated User Entity
-        Cubit->>UI: emit(Success(updatedUser))
-        
-        Note over UI,Auth: UI memicu sinkronisasi Global
-        UI->>Auth: add(AuthUserUpdated(updatedUser))
-        Auth-->>AllApps: UI di seluruh aplikasi berubah!
-        UI->>UI: Tutup BottomSheet
-    else Gagal
-        API-->>Repo: 400/500 Error
-        Repo-->>Cubit: Failure Message
-        Cubit->>UI: emit(Failure)
-        UI->>UI: Munculkan SnackBar Error
+    UI->>Cubit: saveProfile(name, bio, file)
+    Cubit->>UI: emit ProfileLoading
+    Note over UI: CircularProgressIndicator tampil
+
+    Cubit->>Repo: updateProfile(params, File)
+    Repo->>API: dio POST /user/profile (FormData)
+    Note over API: Header Bearer token otomatis via Interceptor
+
+    alt HTTP 200 OK
+        API-->>Repo: JSON updatedUser
+        Repo-->>Cubit: Right(UserEntity)
+        Cubit->>UI: emit ProfileSuccess(updatedUser)
+        UI->>Auth: add AuthUserUpdated(updatedUser)
+        Note over Auth: get_it sl<AuthBloc> Singleton
+        Auth-->>UI: emit AuthAuthenticated (seluruh app update)
+        UI->>UI: Navigator.pop + SnackBar sukses
+    else HTTP 4xx/5xx
+        API-->>Repo: DioException
+        Repo-->>Cubit: Left(Failure)
+        Cubit->>UI: emit ProfileFailure(message)
+        UI->>UI: SnackBar error merah
     end
 ```
 
@@ -122,34 +122,48 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    Start([User Klik Pick Image]) --> PickGallery[Buka Galeri HP]
-    
-    PickGallery --> HasFile{File Dipilih?}
-    HasFile -- "Tidak" --> End([Batal / Tutup])
-    HasFile -- "Ya - Pilih Foto 20MB" --> ShowLoading[Munculkan Spinner di Avatar]
-    
-    ShowLoading --> CallHelper["Panggil ImageProcessorHelper.compressAndCropSquare()"]
-    CallHelper --> RunIsolate["compute() launches Worker Isolate _processImageInIsolate()"]
-    RunIsolate --> IsolateProcess["Decode - Crop Square - Encode JPG - Simpan _processed.jpg"]
-    
-    IsolateProcess --> IsSuccess{Berhasil?}
-    
-    IsSuccess -- "Ya" --> UseCompressed["Gunakan Path _processed.jpg"]
-    IsSuccess -- "Gagal/Error null" --> UseOriginal[Gunakan Path File Asli - Fallback]
-    
-    UseCompressed --> HideLoading
-    UseOriginal --> HideLoading
-    
-    HideLoading[Matikan Spinner] --> RenderUI[Render ImageProvider di UI]
-    RenderUI --> End
-    
-    classDef helper fill:#bbdefb,stroke:#1976d2,stroke-width:2px;
-    classDef isolate fill:#e1bee7,stroke:#8e24aa,stroke-width:2px;
-    classDef success fill:#d4edda,stroke:#28a745,stroke-width:2px;
-    classDef fallback fill:#fff3cd,stroke:#ffc107,stroke-width:2px;
-    
-    class CallHelper helper;
-    class RunIsolate,IsolateProcess isolate;
-    class UseCompressed success;
-    class UseOriginal fallback;
+    A([User tap ikon kamera]) --> B
+
+    B["image_picker\npickImage()"] --> C{File dipilih?}
+    C -- Tidak --> Z([Batal])
+    C -- Ya --> D
+
+    D["setState\nisProcessingImage = true\nSpinner muncul"] --> E
+
+    E["ImageProcessorHelper\n.compressAndCropSquare()"] --> F
+
+    F["compute()\ndart:isolate\nWorker lahir"] --> G
+
+    G["dart:io File\nreadAsBytes()"] --> H
+
+    H["package:image\ndecodeImage()"] --> I
+
+    I["package:image\ncopyResizeCropSquare\nsize: 500px"] --> J
+
+    J["package:image\nencodeJpg\nquality: 80"] --> K
+
+    K["dart:io File\nwriteAsBytes()\n_processed.jpg"] --> L{Berhasil?}
+
+    L -- Ya --> M["File(_processed.jpg)"]
+    L -- Error/null --> N["File(originalPath)\nFallback"]
+
+    M --> O
+    N --> O
+
+    O["setState\nisProcessingImage = false"] --> P
+
+    P["FileImage\nCircleAvatar render"] --> Z2([Selesai])
+
+    classDef ui fill:#c8e6c9,stroke:#388e3c,stroke-width:2px,color:#000
+    classDef helper fill:#bbdefb,stroke:#1976d2,stroke-width:2px,color:#000
+    classDef isolate fill:#e1bee7,stroke:#8e24aa,stroke-width:2px,color:#000
+    classDef success fill:#d4edda,stroke:#28a745,stroke-width:2px,color:#000
+    classDef fallback fill:#fff3cd,stroke:#f57c00,stroke-width:2px,color:#000
+
+    class B,D,O,P ui
+    class E helper
+    class F,G,H,I,J,K isolate
+    class M success
+    class N fallback
 ```
+
