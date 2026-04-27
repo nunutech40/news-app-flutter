@@ -16,10 +16,6 @@ class ProfilePage extends StatelessWidget {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppTheme.textPrimary),
-          onPressed: () => context.pop(),
-        ),
         title: const Text(
           'My Profile',
           style: TextStyle(

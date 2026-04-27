@@ -116,14 +116,18 @@ class AppRouter {
 
 /// Converts a BLoC stream to a Listenable for GoRouter.refreshListenable
 class GoRouterRefreshStream extends ChangeNotifier {
-  GoRouterRefreshStream(Stream<dynamic> stream) {
+  late final dynamic _subscription;
+  AuthStatus? _lastStatus;
+
+  GoRouterRefreshStream(Stream<AuthState> stream) {
     notifyListeners();
-    _subscription = stream.asBroadcastStream().listen((_) {
-      notifyListeners();
+    _subscription = stream.asBroadcastStream().listen((state) {
+      if (_lastStatus != state.status) {
+        _lastStatus = state.status;
+        notifyListeners();
+      }
     });
   }
-
-  late final dynamic _subscription;
 
   @override
   void dispose() {

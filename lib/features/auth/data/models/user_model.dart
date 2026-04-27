@@ -1,3 +1,4 @@
+import 'package:news_app/core/constants/api_constants.dart';
 import 'package:news_app/features/auth/domain/entities/user.dart';
 
 class UserModel extends User {
@@ -18,7 +19,7 @@ class UserModel extends User {
       id: _parseInt(json['id']),
       name: json['name']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
-      avatarUrl: json['avatar_url']?.toString() ?? '',
+      avatarUrl: _resolveAvatarUrl(json['avatar_url']?.toString()),
       bio: json['bio']?.toString() ?? '',
       phone: json['phone']?.toString() ?? '',
       // sometimes preference comes as map, we encode it as string for simple state management
@@ -53,5 +54,17 @@ class UserModel extends User {
       return DateTime.tryParse(value);
     }
     return null;
+  }
+
+  static String _resolveAvatarUrl(String? rawUrl) {
+    if (rawUrl == null || rawUrl.isEmpty) return '';
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+      return rawUrl;
+    }
+    final base = ApiConstants.baseUrl.endsWith('/')
+        ? ApiConstants.baseUrl.substring(0, ApiConstants.baseUrl.length - 1)
+        : ApiConstants.baseUrl;
+    final path = rawUrl.startsWith('/') ? rawUrl : '/$rawUrl';
+    return '$base$path';
   }
 }

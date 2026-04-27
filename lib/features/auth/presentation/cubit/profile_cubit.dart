@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:news_app/core/constants/api_constants.dart';
 import 'package:news_app/core/network/api_client.dart';
 import 'package:news_app/features/auth/domain/entities/user.dart';
 import 'package:news_app/features/auth/domain/usecases/update_profile_usecase.dart';
@@ -23,9 +24,17 @@ class ProfileCubit extends Cubit<ProfileState> {
       });
       // The back-end creates /public/uploads/xxx.jpg and returns "url": "..."
       final response = await apiClient.request('POST', '/api/v1/upload', data: formData);
-      return response['data']['url'] as String?;
+      final rawUrl = response['data']['url'] as String?;
+      if (rawUrl == null || rawUrl.isEmpty) return null;
+      if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+        return rawUrl;
+      }
+      final base = ApiConstants.baseUrl.endsWith('/')
+          ? ApiConstants.baseUrl.substring(0, ApiConstants.baseUrl.length - 1)
+          : ApiConstants.baseUrl;
+      final path = rawUrl.startsWith('/') ? rawUrl : '/$rawUrl';
+      return '$base$path';
     } catch (e) {
-      // Return null or throw exception based on error handling policy
       rethrow;
     }
   }

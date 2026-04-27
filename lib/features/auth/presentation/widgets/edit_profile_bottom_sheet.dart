@@ -134,7 +134,11 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
             context.read<AuthBloc>().add(AuthUserUpdated(state.updatedUser!));
           }
           
-          Navigator.pop(context); // Close the sheet
+          // Use rootNavigator: true to correctly pop the modal bottom sheet,
+          // avoiding 'nothing to pop' GoRouter conflict.
+          if (Navigator.of(context, rootNavigator: true).canPop()) {
+            Navigator.of(context, rootNavigator: true).pop();
+          }
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Profile updated successfully! ✨'),
@@ -213,7 +217,11 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                                   backgroundImage: _selectedImage != null
                                       ? FileImage(_selectedImage!) as ImageProvider
                                       : (currentAvatarUrl != null && currentAvatarUrl.isNotEmpty
-                                          ? CachedNetworkImageProvider(currentAvatarUrl)
+                                          // Append timestamp for cache busting so the new
+                                          // avatar shows immediately after upload.
+                                          ? CachedNetworkImageProvider(
+                                              '$currentAvatarUrl?t=${DateTime.now().millisecondsSinceEpoch ~/ 10000}',
+                                            )
                                           : null),
                                   child: (_selectedImage == null && (currentAvatarUrl == null || currentAvatarUrl.isEmpty))
                                       ? const Icon(Icons.person, size: 40, color: Colors.grey)
