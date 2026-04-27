@@ -1,14 +1,47 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:image/image.dart' as img; // Tambahan package image untuk manipulasi pixel
 import 'package:news_app/core/theme/app_theme.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:news_app/features/auth/presentation/cubit/profile_cubit.dart';
 import 'package:news_app/features/auth/presentation/cubit/profile_state.dart';
 import 'package:news_app/features/news/presentation/cubit/category_cubit.dart';
 import 'package:news_app/injection_container.dart';
+
+/// Fungsi Top-Level atau Static. Wajib ditaruh di luar class agar bisa dijalankan oleh Isolate!
+/// Tugasnya: Membaca file gambar raksasa, meng-crop jadi kotak, mengompres, dan menyimpan ke file baru.
+Future<String?> _compressImageInIsolate(String originalPath) async {
+  try {
+    // 1. Baca byte file asli (Bisa sampai puluhan Megabyte)
+    final File originalFile = File(originalPath);
+    final Uint8List imageBytes = await originalFile.readAsBytes();
+
+    // 2. Decode byte mentah jadi objek gambar yg bisa diedit (Ini proses CPU paling berat!)
+    img.Image? decodedImage = img.decodeImage(imageBytes);
+    if (decodedImage == null) return null;
+
+    // 3. Crop gambar jadi kotak (square) ukuran 500x500 pixel
+    img.Image croppedImage = img.copyResizeCropSquare(decodedImage, size: 500);
+
+    // 4. Encode ulang jadi format JPEG dengan kualitas 80% biar ringan untuk di-upload
+    final Uint8List compressedBytes = img.encodeJpg(croppedImage, quality: 80);
+
+    // 5. Simpan hasil kompresi ke lokasi file baru (_compressed)
+    final String newPath = '${originalPath}_compressed.jpg';
+    final File compressedFile = File(newPath);
+    await compressedFile.writeAsBytes(compressedBytes);
+
+    return newPath;
+  } catch (e) {
+    debugPrint("Error saat memproses gambar di Isolate: $e");
+    return null;
+  }
+}
+
 
 class EditProfileBottomSheet extends StatefulWidget {
   const EditProfileBottomSheet({super.key});
@@ -68,17 +101,35 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
     super.dispose();
   }
 
+  // Flag untuk nampilin loading saat Isolate bekerja
+  bool _isProcessingImage = false;
+
   Future<void> _pickImage() async {
+    // 1. Ambil gambar dari galeri dengan ukuran dan kualitas Maksimal/Original!
     final pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 800,
-      maxHeight: 800,
-      imageQuality: 85,
+      // Sengaja kita hapus maxWidth dan imageQuality biar user bisa milih gambar belasan Megabyte
     );
 
     if (pickedFile != null) {
       setState(() {
-        _selectedImage = File(pickedFile.path);
+        _isProcessingImage = true; // Munculin loading di UI
+      });
+
+      // 2. Lempar tugas berat ke Isolate!
+      // Main Thread (Barista utama) menyuruh Core/Thread lain untuk mengerjakan _compressImageInIsolate
+      // UI akan tetap mulus (60 FPS) selama proses kompresi berjalan.
+      final String? compressedImagePath = await compute(_compressImageInIsolate, pickedFile.path);
+
+      setState(() {
+        _isProcessingImage = false; // Matikan loading
+        if (compressedImagePath != null) {
+          // 3. Gunakan file yang sudah ringan dan di-crop
+          _selectedImage = File(compressedImagePath);
+        } else {
+          // Kalau Isolate gagal, pakai file aslinya
+          _selectedImage = File(pickedFile.path);
+        }
       });
     }
   }
@@ -204,6 +255,19 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
                                       ? const Icon(Icons.person, size: 40, color: Colors.grey)
                                       : null,
                                 ),
+                                // Tampilkan Loading Spinner kalau Isolate sedang bekerja
+                                if (_isProcessingImage)
+                                  Container(
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black54,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    width: 100,
+                                    height: 100,
+                                    child: const Center(
+                                      child: CircularProgressIndicator(color: Colors.white),
+                                    ),
+                                  ),
                                 Container(
                                   decoration: const BoxDecoration(
                                     color: AppTheme.primaryColor,
