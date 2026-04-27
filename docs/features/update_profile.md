@@ -23,6 +23,23 @@ Pemisahan ini memastikan:
 
 ---
 
+## Technology Stack
+
+| Teknologi | Package / API | Versi | Peran dalam Fitur |
+|---|---|---|---|
+| **Image Picker** | `image_picker` | ^1.1.2 | Membuka galeri HP dan mengambil path file gambar yang dipilih user. Sengaja tanpa batasan `maxWidth` agar mengambil resolusi penuh. |
+| **Image Processing** | `image` (pub.dev) | ^4.3.0 | Pure-Dart library untuk manipulasi pixel: decode JPEG/PNG, crop persegi (`copyResizeCropSquare`), dan encode ulang ke JPEG dengan quality tertentu. Berjalan di atas CPU (Software), bukan GPU/Hardware. |
+| **Isolate / Concurrency** | `flutter/foundation.dart` → `compute()` | Built-in Flutter | Fungsi bawaan Flutter yang melempar sebuah fungsi Top-Level ke Worker Isolate (Core CPU terpisah), sehingga Main Thread (UI) tidak pernah freeze selama pemrosesan gambar berjalan. |
+| **Data Transfer Object** | Dart (`class`) | Built-in Dart | `_ImageProcessParams` — class DTO untuk membungkus multi-parameter menjadi satu argumen tunggal. Wajib karena `compute()` hanya menerima satu parameter. |
+| **State Management (Local)** | `flutter_bloc` → `Cubit` | ^9.1.0 | `ProfileCubit` mengelola state UI ephemeral: loading, sukses, dan gagal saat request update profil ke API. |
+| **State Management (Global)** | `flutter_bloc` → `BLoC` | ^9.1.0 | `AuthBloc` sebagai Global Singleton. Menerima event `AuthUserUpdated` dari UI setelah profil sukses diperbarui, sehingga seluruh aplikasi ikut ter-update. |
+| **Dependency Injection** | `get_it` | ^8.0.3 | `ProfileCubit` diinstansiasi via `sl<ProfileCubit>()` di dalam `BlocProvider` pada saat BottomSheet dibuka. |
+| **Network (Upload)** | `dio` | ^5.7.0 | Multipart POST request untuk mengupload file gambar hasil kompresi (`_processed.jpg`) beserta data form profil ke server. |
+| **File System** | `dart:io` → `File` | Built-in Dart | Membaca byte mentah file asli (`readAsBytes()`) dan menulis hasil kompresi ke file baru (`writeAsBytes()`). Digunakan di dalam Worker Isolate. |
+| **Cached Image Display** | `cached_network_image` | ^3.4.1 | Menampilkan avatar profil dari URL (CDN server) dengan caching otomatis, sebagai fallback saat belum ada file lokal yang dipilih. |
+
+
+
 ## Architecture Sequence Diagrams
 
 ### 1. High-Resolution Image Processing Flow (via ImageProcessorHelper + Isolate)

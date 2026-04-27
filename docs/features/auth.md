@@ -29,6 +29,21 @@ Status "Login" seorang pengguna memengaruhi hampir seluruh bagian aplikasi (buka
 
 ---
 
+## Technology Stack
+
+| Teknologi | Package / API | Versi | Peran dalam Fitur |
+|---|---|---|---|
+| **State Management (Global)** | `flutter_bloc` → `BLoC` | ^9.1.0 | `AuthBloc` sebagai Global Singleton. Mengelola seluruh siklus hidup autentikasi: status login, data user, dan token. |
+| **State Management (Local)** | `flutter_bloc` → `Cubit` | ^9.1.0 | `ProfileCubit` untuk mengelola state UI ephemeral di halaman Edit Profile (loading, sukses, gagal). |
+| **Dependency Injection** | `get_it` | ^8.0.3 | Mendaftarkan `AuthBloc` sebagai `LazySingleton` dan semua layer (Repository, DataSource, Cubit) agar bisa dipanggil via `sl<T>()`. |
+| **Routing & Guard** | `go_router` | ^14.8.1 | Mendengarkan perubahan state `AuthBloc` via `refreshListenable` untuk melakukan redirect otomatis (login → dashboard, atau sebaliknya). |
+| **Secure Token Storage** | `flutter_secure_storage` | ^9.2.4 | Menyimpan `accessToken` dan `refreshToken` secara aman di Keychain (iOS) / Keystore (Android). |
+| **HTTP Client** | `dio` | ^5.7.0 | Mengirimkan request `POST /login`, `POST /register`, `GET /profile`, dan `POST /refresh-token`. |
+| **Auth Interceptor** | `dio` → `Interceptor` | ^5.7.0 | Menyuntikkan header `Authorization: Bearer <token>` secara otomatis di setiap request, dan menangani `401 Unauthorized` dengan mekanisme silent refresh token. |
+| **Functional Error Handling** | `dartz` | ^0.10.1 | `Either<Failure, T>` digunakan di seluruh layer Repository untuk merepresentasikan hasil sukses atau gagal tanpa menggunakan `try-catch` di UI. |
+
+---
+
 ## Architecture Sequence Diagrams
 
 ### 1. Login & Global Routing Flow
