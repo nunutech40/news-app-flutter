@@ -1,0 +1,72 @@
+#!/bin/bash
+# ============================================================
+# News App iOS Reset Script
+# Jalankan script ini setiap kali build iOS bermasalah:
+#   - Pod install gagal
+#   - DerivedData korup
+#   - Xcode tidak detect plugin baru
+#   - Error "module not found" atau "framework not found"
+#
+# Usage:
+#   chmod +x reset_ios.sh   (jalankan sekali untuk izinkan eksekusi)
+#   ./reset_ios.sh
+# ============================================================
+
+set -e  # Berhenti otomatis jika ada command yang gagal
+export LANG=en_US.UTF-8
+
+PROJECT_NAME="news_app"
+
+echo ""
+echo "============================================================"
+echo "  🔄 iOS Build Reset — $PROJECT_NAME"
+echo "============================================================"
+echo ""
+
+# [1/6] Flutter Clean
+echo "🧹 [1/6] Flutter clean (hapus build cache Dart & Flutter)..."
+fvm flutter clean
+echo "✅ Done."
+echo ""
+
+# [2/6] Flutter Pub Get
+echo "📦 [2/6] Flutter pub get (restore semua dependencies)..."
+fvm flutter pub get
+echo "✅ Done."
+echo ""
+
+# [3/6] Hapus Artifacts CocoaPods lama
+echo "🗑️  [3/6] Hapus artifacts CocoaPods lama..."
+rm -rf ios/Pods
+rm -rf ios/Podfile.lock
+rm -rf ios/Runner.xcworkspace
+echo "✅ Pods, Podfile.lock, dan xcworkspace dihapus."
+echo ""
+
+# [4/6] Hapus DerivedData Xcode yang korup
+echo "🗄️  [4/6] Hapus DerivedData Xcode yang korup..."
+rm -rf ~/Library/Developer/Xcode/DerivedData/ModuleCache.noindex
+rm -rf ~/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex
+# Hapus DerivedData spesifik project ini
+rm -rf ~/Library/Developer/Xcode/DerivedData/Runner-*
+rm -rf ~/Library/Developer/Xcode/DerivedData/Pods-*
+echo "✅ DerivedData bersih."
+echo ""
+
+# [5/6] Pod Install Ulang
+echo "🔧 [5/6] Pod install ulang..."
+cd ios
+pod install --repo-update
+cd ..
+echo "✅ Pod install selesai."
+echo ""
+
+# [6/6] Selesai
+echo "============================================================"
+echo "🚀 [6/6] Reset selesai! Langkah selanjutnya:"
+echo ""
+echo "   1. Buka Xcode via:   open ios/Runner.xcworkspace"
+echo "   2. Atau langsung run: fvm flutter run"
+echo "   3. Jika masih error:  fvm flutter run -v (verbose untuk debug)"
+echo "============================================================"
+echo ""
