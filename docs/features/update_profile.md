@@ -5,47 +5,64 @@ Modul Update Profile memungkinkan pengguna memperbarui informasi pribadi (nama, 
 
 ### 1. State Management (ProfileCubit)
 - Menggunakan `ProfileCubit` yang bersifat _ephemeral_ (sementara), dibuat ketika `EditProfileBottomSheet` dibuka, dan dihancurkan ketika ditutup.
-- Setelah sukses menyimpan data via API, Cubit ini mengirimkan event ke _Global State_ (`AuthBloc`) agar _Source of Truth_ (data profil di seluruuh aplikasi) ter-update secara _real-time_.
+- Setelah sukses menyimpan data via API, Cubit ini mengirimkan event ke _Global State_ (`AuthBloc`) agar _Source of Truth_ (data profil di seluruh aplikasi) ter-update secara _real-time_.
 
-### 2. High-Resolution Image Processing (Isolate)
-- Kita secara sengaja menghapus batasan `maxWidth` dan `imageQuality` pada `ImagePicker` agar pengguna dapat memilih foto beresolusi penuh.
-- Proses kompresi dan _cropping_ (pemotongan persegi) sangat berat bagi CPU. Oleh karena itu, tugas ini dilempar ke luar dari _Main Thread_ menggunakan fungsi `compute()`, sehingga menciptakan _Isolate_ independen.
-- Hal ini menjamin animasi loading UI tetap berjalan mulus di 60 FPS tanpa patah-patah (*Jank*).
+### 2. High-Resolution Image Processing (Isolate via ImageProcessorHelper)
+Pemrosesan gambar resolusi tinggi diimplementasikan menggunakan arsitektur berlapis sesuai prinsip _Clean Architecture_:
+
+- **UI Layer** (`EditProfileBottomSheet`): Bersifat "bodoh" (_Dumb UI_). Hanya memanggil `ImageProcessorHelper.compressAndCropSquare()` dan menerima hasilnya. Tidak tahu cara kerja kompresi sama sekali.
+- **Core Utility Layer** (`lib/core/utils/image_processor.dart`): Satu-satunya kelas yang bertanggung jawab atas manipulasi pixel. Mengandung:
+  - `_ImageProcessParams`: DTO (Data Transfer Object) untuk membungkus konfigurasi (path, targetSize, quality) menjadi satu argumen tunggal yang bisa dikirim ke `compute()`.
+  - `_processImageInIsolate()`: Fungsi _Top-Level_ (di luar class) yang dijalankan Worker Isolate. Wajib _Top-Level_ karena `compute()` hanya bisa menjalankan fungsi yang tidak terikat ke instance manapun.
+  - `ImageProcessorHelper.compressAndCropSquare()`: Static method yang menjadi pintu masuk publik bagi seluruh fitur lain di aplikasi.
+
+Pemisahan ini memastikan:
+1. **Reusability**: Fitur lain (misal: upload foto artikel) bisa langsung pakai `ImageProcessorHelper` yang sama.
+2. **Testability**: Logika kompresi bisa di-_unit test_ secara independen tanpa Widget.
+3. **Single Responsibility**: UI hanya tahu tampilan. Core hanya tahu algoritma.
 
 ---
 
 ## Architecture Sequence Diagrams
 
-### 1. High-Resolution Image Processing Flow (Isolate)
-Diagram ini menjelaskan bagaimana proses pemindahan kerja CPU dari UI Thread ke Isolate ketika pengguna memilih file foto yang besar.
+### 1. High-Resolution Image Processing Flow (via ImageProcessorHelper + Isolate)
+Diagram ini menjelaskan bagaimana UI mendelegasikan pemrosesan gambar ke `ImageProcessorHelper` (Core Utility), yang kemudian menjalankan tugasnya di Worker Isolate.
 
 ```mermaid
 sequenceDiagram
     participant User
     participant UI as EditProfileBottomSheet
-    participant MainThread as Main Isolate (UI)
-    participant Worker as Worker Isolate (compute)
+    participant Helper as ImageProcessorHelper (core/utils)
+    participant Worker as Worker Isolate (_processImageInIsolate)
     participant Disk as Storage/File
 
     User->>UI: Klik icon kamera (Pick Image)
-    UI->>MainThread: Buka Galeri
-    MainThread-->>UI: File Gambar Asli (Bisa 10MB+)
+    UI->>UI: Buka Galeri (ImagePicker, tanpa batasan ukuran)
+    UI-->>UI: File Gambar Asli (Bisa 10MB+)
     
-    UI->>MainThread: Munculkan Loading Spinner (setState)
-    MainThread->>Worker: compute(_compressImageInIsolate, filePath)
+    UI->>UI: setState(_isProcessingImage = true) - Munculkan Spinner
+    UI->>Helper: compressAndCropSquare(originalPath: filePath)
     
-    Note over MainThread,Worker: Main Thread bebas mengurus UI (60 FPS)<br/>sementara Worker bekerja keras.
+    Note over Helper,Worker: Helper membungkus params ke _ImageProcessParams DTO,<br/>lalu memanggil compute() sehingga Worker Isolate lahir.
     
-    Worker->>Disk: Baca byte gambar mentah
-    Disk-->>Worker: Uint8List
-    Worker->>Worker: Decode image (Heavy CPU)
-    Worker->>Worker: Crop Square (500x500)
-    Worker->>Worker: Encode JPG (80% Quality)
-    Worker->>Disk: Simpan file hasil compress
-    Disk-->>Worker: Path file baru (_compressed)
+    Helper->>Worker: compute(_processImageInIsolate, params)
     
-    Worker-->>MainThread: Return compressed path
-    MainThread->>UI: Sembunyikan Spinner, Tampilkan Avatar Baru
+    Note over UI,Worker: Main Thread bebas mengurus UI (60 FPS)<br/>sementara Worker bekerja keras di Core CPU terpisah.
+
+    Worker->>Disk: readAsBytes() - Baca byte gambar mentah
+    Disk-->>Worker: Uint8List (raw bytes)
+    Worker->>Worker: img.decodeImage() - Decode ke pixel (CPU Berat)
+    Worker->>Worker: img.copyResizeCropSquare(size: 500) - Crop Square
+    Worker->>Worker: img.encodeJpg(quality: 80) - Kompres JPEG
+    Worker->>Disk: writeAsBytes() - Simpan ke _processed.jpg
+    Disk-->>Worker: Path file baru
+    
+    Worker-->>Helper: Return path (_processed.jpg) atau null jika error
+    Helper-->>UI: Return processedPath
+    
+    UI->>UI: setState(_isProcessingImage = false)
+    UI->>UI: Fallback - gunakan processedPath ?? originalPath
+    UI->>UI: Render ImageProvider - Tampilkan Avatar Baru
 ```
 
 ### 2. Profile Update & Global State Synchronization Flow
@@ -59,7 +76,7 @@ sequenceDiagram
     participant API as ApiClient
     participant Auth as Global AuthBloc
 
-    UI->>Cubit: saveProfile(name, file_compressed, ...)
+    UI->>Cubit: saveProfile(name, file_processed, ...)
     Cubit->>UI: emit(Loading)
     
     Cubit->>Repo: updateProfile(data, file)
@@ -92,15 +109,16 @@ flowchart TD
     
     PickGallery --> HasFile{File Dipilih?}
     HasFile -- "Tidak" --> End([Batal / Tutup])
-    HasFile -- "Ya (Pilih Foto 20MB)" --> ShowLoading[Munculkan Spinner di Avatar]
+    HasFile -- "Ya - Pilih Foto 20MB" --> ShowLoading[Munculkan Spinner di Avatar]
     
-    ShowLoading --> RunIsolate[Jalankan compute(Isolate)]
-    RunIsolate --> IsolateProcess[Decode -> Crop -> Encode]
+    ShowLoading --> CallHelper["Panggil ImageProcessorHelper.compressAndCropSquare()"]
+    CallHelper --> RunIsolate["compute() launches Worker Isolate _processImageInIsolate()"]
+    RunIsolate --> IsolateProcess["Decode - Crop Square - Encode JPG - Simpan _processed.jpg"]
     
-    IsolateProcess --> IsSuccess{Berhasil Kompres?}
+    IsolateProcess --> IsSuccess{Berhasil?}
     
-    IsSuccess -- "Ya" --> UseCompressed[Gunakan Path '_compressed.jpg']
-    IsSuccess -- "Gagal/Error" --> UseOriginal[Gunakan Path File Asli (Fallback)]
+    IsSuccess -- "Ya" --> UseCompressed["Gunakan Path _processed.jpg"]
+    IsSuccess -- "Gagal/Error null" --> UseOriginal[Gunakan Path File Asli - Fallback]
     
     UseCompressed --> HideLoading
     UseOriginal --> HideLoading
@@ -108,10 +126,12 @@ flowchart TD
     HideLoading[Matikan Spinner] --> RenderUI[Render ImageProvider di UI]
     RenderUI --> End
     
+    classDef helper fill:#bbdefb,stroke:#1976d2,stroke-width:2px;
     classDef isolate fill:#e1bee7,stroke:#8e24aa,stroke-width:2px;
     classDef success fill:#d4edda,stroke:#28a745,stroke-width:2px;
     classDef fallback fill:#fff3cd,stroke:#ffc107,stroke-width:2px;
     
+    class CallHelper helper;
     class RunIsolate,IsolateProcess isolate;
     class UseCompressed success;
     class UseOriginal fallback;
