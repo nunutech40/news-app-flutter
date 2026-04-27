@@ -1,46 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:image/image.dart' as img; // Tambahan package image untuk manipulasi pixel
+import 'package:news_app/core/utils/image_processor.dart';
 import 'package:news_app/core/theme/app_theme.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:news_app/features/auth/presentation/cubit/profile_cubit.dart';
 import 'package:news_app/features/auth/presentation/cubit/profile_state.dart';
 import 'package:news_app/features/news/presentation/cubit/category_cubit.dart';
 import 'package:news_app/injection_container.dart';
-
-/// Fungsi Top-Level atau Static. Wajib ditaruh di luar class agar bisa dijalankan oleh Isolate!
-/// Tugasnya: Membaca file gambar raksasa, meng-crop jadi kotak, mengompres, dan menyimpan ke file baru.
-Future<String?> _compressImageInIsolate(String originalPath) async {
-  try {
-    // 1. Baca byte file asli (Bisa sampai puluhan Megabyte)
-    final File originalFile = File(originalPath);
-    final Uint8List imageBytes = await originalFile.readAsBytes();
-
-    // 2. Decode byte mentah jadi objek gambar yg bisa diedit (Ini proses CPU paling berat!)
-    img.Image? decodedImage = img.decodeImage(imageBytes);
-    if (decodedImage == null) return null;
-
-    // 3. Crop gambar jadi kotak (square) ukuran 500x500 pixel
-    img.Image croppedImage = img.copyResizeCropSquare(decodedImage, size: 500);
-
-    // 4. Encode ulang jadi format JPEG dengan kualitas 80% biar ringan untuk di-upload
-    final Uint8List compressedBytes = img.encodeJpg(croppedImage, quality: 80);
-
-    // 5. Simpan hasil kompresi ke lokasi file baru (_compressed)
-    final String newPath = '${originalPath}_compressed.jpg';
-    final File compressedFile = File(newPath);
-    await compressedFile.writeAsBytes(compressedBytes);
-
-    return newPath;
-  } catch (e) {
-    debugPrint("Error saat memproses gambar di Isolate: $e");
-    return null;
-  }
-}
 
 
 class EditProfileBottomSheet extends StatefulWidget {
@@ -105,31 +74,26 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
   bool _isProcessingImage = false;
 
   Future<void> _pickImage() async {
-    // 1. Ambil gambar dari galeri dengan ukuran dan kualitas Maksimal/Original!
+    // UI cuma tahu: ambil file dari galeri, lalu minta tolong ke Helper.
+    // UI tidak tahu dan tidak peduli bagaimana cara crop/compress dilakukan.
     final pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
-      // Sengaja kita hapus maxWidth dan imageQuality biar user bisa milih gambar belasan Megabyte
+      // Tanpa batasan ukuran: biarkan user pilih foto resolusi penuh.
     );
 
     if (pickedFile != null) {
-      setState(() {
-        _isProcessingImage = true; // Munculin loading di UI
-      });
+      setState(() => _isProcessingImage = true);
 
-      // 2. Lempar tugas berat ke Isolate!
-      // Main Thread (Barista utama) menyuruh Core/Thread lain untuk mengerjakan _compressImageInIsolate
-      // UI akan tetap mulus (60 FPS) selama proses kompresi berjalan.
-      final String? compressedImagePath = await compute(_compressImageInIsolate, pickedFile.path);
+      // Delegasikan semua kerja berat ke ImageProcessorHelper.
+      // Di balik layar, Helper akan menjalankan ini di Worker Isolate.
+      final String? processedPath = await ImageProcessorHelper.compressAndCropSquare(
+        originalPath: pickedFile.path,
+      );
 
       setState(() {
-        _isProcessingImage = false; // Matikan loading
-        if (compressedImagePath != null) {
-          // 3. Gunakan file yang sudah ringan dan di-crop
-          _selectedImage = File(compressedImagePath);
-        } else {
-          // Kalau Isolate gagal, pakai file aslinya
-          _selectedImage = File(pickedFile.path);
-        }
+        _isProcessingImage = false;
+        // Fallback: jika Helper gagal, gunakan file asli agar app tidak crash.
+        _selectedImage = File(processedPath ?? pickedFile.path);
       });
     }
   }
