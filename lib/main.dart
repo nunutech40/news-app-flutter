@@ -9,6 +9,7 @@ import 'package:news_app/core/theme/app_theme.dart';
 import 'package:news_app/core/bloc/global_alert/global_alert_bloc.dart';
 import 'package:news_app/core/bloc/global_alert/global_alert_state.dart';
 import 'package:news_app/core/utils/ui_helpers.dart';
+import 'package:news_app/core/services/notification_service.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:news_app/injection_container.dart' as di;
 import 'package:news_app/injection_container.dart';
@@ -40,6 +41,9 @@ void main() async {
   // Wajib dipanggil PERTAMA jika ada operasi async sebelum runApp().
   // Tanpa ini, pemanggilan SharedPreferences.getInstance() dll akan crash.
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inisialisasi Local Notifications
+  await NotificationService.initialize();
 
   // ── 2. ORIENTASI LAYAR ──────────────────────────────────────────────────
   // Kunci orientasi ke portrait saja. Kebanyakan app berita/sosmed

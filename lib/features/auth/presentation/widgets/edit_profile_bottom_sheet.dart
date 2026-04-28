@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:news_app/core/utils/image_processor.dart';
 import 'package:news_app/core/theme/app_theme.dart';
+import 'package:news_app/core/services/notification_service.dart';
 import 'package:news_app/core/utils/snackbar_mixin.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:news_app/features/auth/presentation/cubit/profile_cubit.dart';
@@ -136,6 +137,12 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> with Sn
             Navigator.of(context, rootNavigator: true).pop();
           }
           showSuccessSnackbar('Profile updated successfully! ✨');
+          
+          // Tembakkan notifikasi lokal!
+          NotificationService.showNotification(
+            title: 'Update Berhasil',
+            body: 'Profil Anda telah berhasil diperbarui.',
+          );
         }
       },
       builder: (context, state) {

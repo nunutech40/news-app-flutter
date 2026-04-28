@@ -37,6 +37,7 @@ Pemisahan ini memastikan:
 | **Network (Upload)** | `dio` | ^5.7.0 | Multipart POST request untuk mengupload file gambar hasil kompresi (`_processed.jpg`) beserta data form profil ke server. |
 | **File System** | `dart:io` → `File` | Built-in Dart | Membaca byte mentah file asli (`readAsBytes()`) dan menulis hasil kompresi ke file baru (`writeAsBytes()`). Digunakan di dalam Worker Isolate. |
 | **Cached Image Display** | `cached_network_image` | ^3.4.1 | Menampilkan avatar profil dari URL (CDN server) dengan caching otomatis, sebagai fallback saat belum ada file lokal yang dipilih. |
+| **Local Notifications** | `flutter_local_notifications` | ^17.0.0+ | Memberikan notifikasi sistem (Heads-up) ketika profil berhasil diperbarui, dieksekusi melalui pemanggilan Native API (Android Channels / iOS Permissions). |
 
 
 
@@ -91,6 +92,8 @@ sequenceDiagram
     participant Repo as "Domain: UserRepository"
     participant API as "dio: ApiClient (Multipart)"
     participant Auth as "flutter_bloc: AuthBloc (Global)"
+    participant Notif as "core/services: NotificationService"
+    participant OS as "Native OS (Android/iOS)"
 
     UI->>Cubit: saveProfile(name, bio, file)
     Cubit->>UI: emit ProfileLoading
@@ -108,6 +111,9 @@ sequenceDiagram
         Note over Auth: get_it sl<AuthBloc> Singleton
         Auth-->>UI: emit AuthAuthenticated (seluruh app update)
         UI->>UI: Navigator.pop + SnackBar sukses
+        UI->>Notif: NotificationService.showNotification()
+        Notif->>OS: Plugin memanggil Native Code
+        OS-->>User: Muncul Notifikasi Heads-Up "Update Berhasil"
     else HTTP 4xx/5xx
         API-->>Repo: DioException
         Repo-->>Cubit: Left(Failure)
@@ -171,3 +177,36 @@ flowchart TD
 | **Processed** | `dart:io File` | Gunakan `_processed.jpg` |
 | **Fallback** | `dart:io File` | Gunakan file asli jika Isolate error |
 | **Render** | `flutter/widgets.dart FileImage` | Tampil di `CircleAvatar` |
+
+---
+
+## Architecture Sequence Diagrams: Local Notification
+
+### 3. Local Notification Initialization & Trigger Flow
+
+Diagram ini menjelaskan bagaimana proses pendaftaran birokrasi _Native_ (Channel & Permission) dilakukan di awal aplikasi, lalu dipicu oleh UI saat profil berhasil diubah.
+
+```mermaid
+sequenceDiagram
+    participant Main as "main.dart"
+    participant Notif as "NotificationService"
+    participant Plugin as "flutter_local_notifications"
+    participant OS as "Native OS"
+    participant UI as "EditProfileBottomSheet"
+
+    Note over Main,OS: Tahap 1: Inisialisasi (App Start)
+    Main->>Notif: NotificationService.initialize()
+    Notif->>Plugin: initialize(InitializationSettings)
+    Plugin->>OS: Daftarkan pengaturan awal (Icon dll)
+    Notif->>Plugin: requestNotificationsPermission()
+    Plugin->>OS: OS mengecek izin / memunculkan dialog (Android 13+ / iOS)
+    OS-->>Plugin: User Grant Permission
+    
+    Note over UI,OS: Tahap 2: Triggering (Profile Saved)
+    UI->>UI: State == ProfileSuccess
+    UI->>Notif: showNotification(title, body)
+    Notif->>Plugin: show(NotificationDetails)
+    Note over Plugin: Membawa "KTP" AndroidNotificationDetails
+    Plugin->>OS: Minta OS memunculkan Heads-up
+    OS-->>User: Pop-up Notifikasi Muncul!
+```
