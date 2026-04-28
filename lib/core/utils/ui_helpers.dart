@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:news_app/core/theme/app_theme.dart';
 
-class UIHelpers {
+extension UIHelpersExtension on BuildContext {
   /// Menampilkan BottomSheet standar untuk error Jaringan (No Internet & Timeout).
   /// [isTimeout] true jika error adalah timeout, false jika no internet.
   /// [onTryAgain] callback block function untuk men-trigger ulang aksi sebelumnya (Opsional).
-  static void showNetworkBottomSheet(
-      BuildContext context, bool isTimeout, {VoidCallback? onTryAgain}) {
+  void showNetworkBottomSheet(bool isTimeout, {VoidCallback? onTryAgain}) {
     showModalBottomSheet(
-      context: context,
+      context: this,
       backgroundColor: Colors.transparent,
       builder: (context) {
         return Container(

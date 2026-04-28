@@ -231,7 +231,7 @@ class _SearchListCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    DateHelper.timeAgo(article.publishedAt),
+                    article.publishedAt.timeAgo,
                     style: const TextStyle(
                       color: AppTheme.textMuted,
                       fontSize: 12,

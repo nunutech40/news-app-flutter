@@ -5,6 +5,7 @@ import 'package:news_app/core/theme/app_theme.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:news_app/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:news_app/core/utils/validators.dart';
+import 'package:news_app/core/utils/snackbar_mixin.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -14,7 +15,7 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, SnackbarMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -73,19 +74,7 @@ class _RegisterPageState extends State<RegisterPage>
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state.status == AuthStatus.registrationSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(Icons.check_circle_outline,
-                        color: AppTheme.success),
-                    const SizedBox(width: 12),
-                    const Text('Registration successful! Please login.'),
-                  ],
-                ),
-                backgroundColor: AppTheme.surfaceElevated,
-              ),
-            );
+            showSuccessSnackbar('Registration successful! Please login.');
             context.goNamed('login');
           } else if (state.status == AuthStatus.error && state.errorMessage != null) {
             final msg = state.errorMessage!;
@@ -94,18 +83,7 @@ class _RegisterPageState extends State<RegisterPage>
               return;
             }
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(Icons.error_outline, color: AppTheme.error),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text(msg)),
-                  ],
-                ),
-                backgroundColor: AppTheme.surfaceElevated,
-              ),
-            );
+            showErrorSnackbar(msg);
           }
         },
         child: Container(

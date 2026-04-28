@@ -158,7 +158,7 @@ class NewsApp extends StatelessWidget {
                 final navContext = AppRouter.rootNavigatorKey.currentContext;
                 if (navContext != null) {
                   // Munculkan UI BottomSheet secara global di atas Navigator
-                  UIHelpers.showNetworkBottomSheet(navContext, state.isTimeout);
+                  navContext.showNetworkBottomSheet(state.isTimeout);
                 }
               }
             },

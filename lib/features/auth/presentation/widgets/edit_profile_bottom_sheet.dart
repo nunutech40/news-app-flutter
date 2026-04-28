@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:news_app/core/utils/image_processor.dart';
 import 'package:news_app/core/theme/app_theme.dart';
+import 'package:news_app/core/utils/snackbar_mixin.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:news_app/features/auth/presentation/cubit/profile_cubit.dart';
 import 'package:news_app/features/auth/presentation/cubit/profile_state.dart';
@@ -35,7 +36,7 @@ class EditProfileBottomSheet extends StatefulWidget {
   State<EditProfileBottomSheet> createState() => _EditProfileBottomSheetState();
 }
 
-class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
+class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> with SnackbarMixin {
   final _formKey = GlobalKey<FormState>();
   
   late TextEditingController _nameController;
@@ -122,12 +123,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
     return BlocConsumer<ProfileCubit, ProfileState>(
       listener: (context, state) {
         if (state.status == ProfileStatus.failure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.errorMessage ?? 'Update failed'),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
+          showErrorSnackbar(state.errorMessage ?? 'Update failed');
         } else if (state.status == ProfileStatus.success) {
           // Tell AuthBloc about the newly updated data!
           if (state.updatedUser != null) {
@@ -139,12 +135,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
           if (Navigator.of(context, rootNavigator: true).canPop()) {
             Navigator.of(context, rootNavigator: true).pop();
           }
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profile updated successfully! ✨'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          showSuccessSnackbar('Profile updated successfully! ✨');
         }
       },
       builder: (context, state) {

@@ -23,7 +23,8 @@ class UserModel extends User {
       bio: json['bio']?.toString() ?? '',
       phone: json['phone']?.toString() ?? '',
       // sometimes preference comes as map, we encode it as string for simple state management
-      preferences: json['preferences'] != null ? json['preferences'].toString() : '',
+      preferences:
+          json['preferences'] != null ? json['preferences'].toString() : '',
       createdAt: _parseDateTime(json['created_at']),
     );
   }
