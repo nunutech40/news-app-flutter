@@ -220,33 +220,33 @@ Flowchart ini menggambarkan logika kondisional yang terjadi di balik layar saat 
 
 ```mermaid
 flowchart TD
-    A([Aplikasi Dibuka]) --> B[Inisialisasi Plugin]
-    B --> C{Cek Platform OS}
+    A(["Aplikasi Dibuka"]) --> B["Inisialisasi Plugin"]
+    B --> C{"Cek Platform OS"}
     
-    C -- "Android < 13" --> D[Siapkan Channel (KTP)]
-    C -- "Android >= 13" --> E{Sudah Diberi Izin?}
-    C -- "iOS" --> F{Sudah Diberi Izin?}
+    C -- "Android < 13" --> D["Siapkan Channel (KTP)"]
+    C -- "Android >= 13" --> E{"Sudah Diberi Izin?"}
+    C -- "iOS" --> F{"Sudah Diberi Izin?"}
     
-    E -- Belum --> G[Minta Izin POST_NOTIFICATIONS]
-    F -- Belum --> H[Minta Izin Alert/Badge/Sound]
+    E -- Belum --> G["Minta Izin POST_NOTIFICATIONS"]
+    F -- Belum --> H["Minta Izin Alert/Badge/Sound"]
     
-    G --> I{User Mengizinkan?}
+    G --> I{"User Mengizinkan?"}
     H --> I
     
     E -- Sudah --> D
     F -- Sudah --> D
     I -- Ya --> D
-    I -- Tidak --> Z([Notifikasi Mati Secara Silent])
+    I -- Tidak --> Z(["Notifikasi Mati Secara Silent"])
     
-    D --> J([Standby Menunggu Aksi])
-    J --> K[User Menyimpan Profil]
-    K --> L{Status Update?}
-    L -- Sukses --> M[Panggil showNotification]
+    D --> J(["Standby Menunggu Aksi"])
+    J --> K["User Menyimpan Profil"]
+    K --> L{"Status Update?"}
+    L -- Sukses --> M["Panggil showNotification"]
     L -- Gagal --> J
     
-    M --> N{Status Channel Settings?}
+    M --> N{"Status Channel Settings?"}
     N -- Dimatikan User --> Z
-    N -- Menyala --> O[OS Munculkan Heads-Up!]
+    N -- Menyala --> O["OS Munculkan Heads-Up!"]
     
     classDef init fill:#e1bee7,stroke:#8e24aa,color:#000
     classDef check fill:#fff3cd,stroke:#f57c00,color:#000
