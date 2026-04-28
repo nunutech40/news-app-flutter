@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 // Core
 import 'package:news_app/core/network/api_client.dart';
 import 'package:news_app/core/network/token_provider.dart';
+import 'package:news_app/core/domain/repositories/notification_repository.dart';
+import 'package:news_app/core/data/repositories/notification_repository_impl.dart';
 
 // Auth - Data
 import 'package:news_app/features/auth/data/datasources/auth_local_datasource.dart';
@@ -134,13 +136,18 @@ Future<void> initDependencies() async {
     ),
   );
 
+  // LazySingleton: Global Notification Repository
+  sl.registerLazySingleton<NotificationRepository>(
+    () => NotificationRepositoryImpl(),
+  );
+
   // ==================== Use Cases ====================
   // LazySingleton: UseCase STATELESS, hanya meneruskan panggilan ke Repository.
   // Sangat ringan dan tidak perlu dibuat ulang.
   sl.registerLazySingleton(() => LoginUseCase(sl()));
   sl.registerLazySingleton(() => RegisterUseCase(sl()));
   sl.registerLazySingleton(() => GetProfileUseCase(sl()));
-  sl.registerLazySingleton(() => UpdateProfileUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateProfileUseCase(sl(), sl()));
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
 
   // ==================== BLoC ====================

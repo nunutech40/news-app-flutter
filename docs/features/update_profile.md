@@ -87,36 +87,36 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant UI as "UI: EditProfileBottomSheet"
-    participant Cubit as "flutter_bloc: ProfileCubit"
-    participant Repo as "Domain: UserRepository"
-    participant API as "dio: ApiClient (Multipart)"
-    participant Auth as "flutter_bloc: AuthBloc (Global)"
-    participant Notif as "core/services: NotificationService"
-    participant OS as "Native OS (Android/iOS)"
+    participant UI as "EditProfileBottomSheet"
+    participant Cubit as "ProfileCubit"
+    participant UC as "UpdateProfileUseCase"
+    participant Repo as "AuthRepository"
+    participant API as "ApiClient (Dio)"
+    participant Notif as "NotificationRepository"
+    participant Auth as "AuthBloc (Global)"
 
     UI->>Cubit: saveProfile(name, bio, file)
     Cubit->>UI: emit ProfileLoading
-    Note over UI: CircularProgressIndicator tampil
-
-    Cubit->>Repo: updateProfile(params, File)
-    Repo->>API: dio POST /user/profile (FormData)
-    Note over API: Header Bearer token otomatis via Interceptor
+    
+    Cubit->>UC: call(User)
+    UC->>Repo: updateProfile(User)
+    Repo->>API: POST /user/profile (FormData)
 
     alt HTTP 200 OK
         API-->>Repo: JSON updatedUser
-        Repo-->>Cubit: Right(UserEntity)
+        Repo-->>UC: Right(UserEntity)
+        Note over UC,Notif: Business Logic memerintahkan Notifikasi
+        UC->>Notif: showNotification("Update Berhasil")
+        UC-->>Cubit: Right(UserEntity)
+        
         Cubit->>UI: emit ProfileSuccess(updatedUser)
         UI->>Auth: add AuthUserUpdated(updatedUser)
-        Note over Auth: get_it sl<AuthBloc> Singleton
-        Auth-->>UI: emit AuthAuthenticated (seluruh app update)
+        Auth-->>UI: emit AuthAuthenticated (app terupdate)
         UI->>UI: Navigator.pop + SnackBar sukses
-        UI->>Notif: NotificationService.showNotification()
-        Notif->>OS: Plugin memanggil Native Code
-        OS-->>User: Muncul Notifikasi Heads-Up "Update Berhasil"
     else HTTP 4xx/5xx
         API-->>Repo: DioException
-        Repo-->>Cubit: Left(Failure)
+        Repo-->>UC: Left(Failure)
+        UC-->>Cubit: Left(Failure)
         Cubit->>UI: emit ProfileFailure(message)
         UI->>UI: SnackBar error merah
     end
@@ -189,22 +189,20 @@ Diagram ini menjelaskan bagaimana proses pendaftaran birokrasi _Native_ (Channel
 ```mermaid
 sequenceDiagram
     participant Main as "main.dart"
-    participant Notif as "NotificationService"
+    participant UC as "UpdateProfileUseCase"
+    participant Notif as "NotificationRepoImpl"
     participant Plugin as "flutter_local_notifications"
     participant OS as "Native OS"
-    participant UI as "EditProfileBottomSheet"
 
     Note over Main,OS: Tahap 1: Inisialisasi (App Start)
-    Main->>Notif: NotificationService.initialize()
-    Notif->>Plugin: initialize(InitializationSettings)
+    Main->>Plugin: NotificationService.initialize()
     Plugin->>OS: Daftarkan pengaturan awal (Icon dll)
-    Notif->>Plugin: requestNotificationsPermission()
-    Plugin->>OS: OS mengecek izin / memunculkan dialog (Android 13+ / iOS)
+    Plugin->>OS: Minta Izin OS (Android 13+ / iOS)
     OS-->>Plugin: User Grant Permission
     
-    Note over UI,OS: Tahap 2: Triggering (Profile Saved)
-    UI->>UI: State == ProfileSuccess
-    UI->>Notif: showNotification(title, body)
+    Note over UC,OS: Tahap 2: Triggering (Business Logic)
+    UC->>UC: Result == Right(User)
+    UC->>Notif: showNotification(title, body)
     Notif->>Plugin: show(NotificationDetails)
     Note over Plugin: Membawa "KTP" AndroidNotificationDetails
     Plugin->>OS: Minta OS memunculkan Heads-up
@@ -227,7 +225,7 @@ flowchart TD
     D --> E{"Status API"}
     
     E -- Gagal --> C
-    E -- Sukses --> F["Panggil showNotification()"]
+    E -- Sukses --> F["UseCase Memanggil Notifikasi"]
     
     F --> G["Kirim Data ke Native OS"]
     G --> H(["Notifikasi Heads-Up Muncul!"])
