@@ -195,7 +195,8 @@ sequenceDiagram
     participant OS as "Native OS"
 
     Note over Main,OS: Tahap 1: Inisialisasi (App Start)
-    Main->>Plugin: NotificationService.initialize()
+    Main->>Notif: initialize()
+    Notif->>Plugin: initialize(InitializationSettings)
     Plugin->>OS: Daftarkan pengaturan awal (Icon dll)
     Plugin->>OS: Minta Izin OS (Android 13+ / iOS)
     OS-->>Plugin: User Grant Permission

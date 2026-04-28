@@ -9,7 +9,7 @@ import 'package:news_app/core/theme/app_theme.dart';
 import 'package:news_app/core/bloc/global_alert/global_alert_bloc.dart';
 import 'package:news_app/core/bloc/global_alert/global_alert_state.dart';
 import 'package:news_app/core/utils/ui_helpers.dart';
-import 'package:news_app/core/services/notification_service.dart';
+import 'package:news_app/core/domain/repositories/notification_repository.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:news_app/injection_container.dart' as di;
 import 'package:news_app/injection_container.dart';
@@ -42,9 +42,6 @@ void main() async {
   // Tanpa ini, pemanggilan SharedPreferences.getInstance() dll akan crash.
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inisialisasi Local Notifications
-  await NotificationService.initialize();
-
   // ── 2. ORIENTASI LAYAR ──────────────────────────────────────────────────
   // Kunci orientasi ke portrait saja. Kebanyakan app berita/sosmed
   // tidak memerlukan landscape mode. Hapus ini jika butuh landscape.
@@ -67,6 +64,9 @@ void main() async {
   // Inisialisasi semua service: Storage, ApiClient, DataSource, Repository,
   // UseCase, dan BLoC. Lihat injection_container.dart untuk detail.
   await di.initDependencies();
+
+  // Inisialisasi Local Notifications lewat Repository yang sudah di-inject
+  await sl<NotificationRepository>().initialize();
 
   // ── 5. BLOC OBSERVER (DEBUG ONLY) ───────────────────────────────────────
   // Aktifkan logging otomatis setiap kali ada Event masuk atau State berubah
