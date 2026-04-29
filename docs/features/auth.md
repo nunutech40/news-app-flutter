@@ -329,13 +329,15 @@ sequenceDiagram
     Note over UC, Repo: 3. UseCase delegates to Repository
     UC->>Repo: signInWithOAuth(GoogleOAuthService)
     
-    Note over Repo, Service: 4. THE TRIGGER! Repository fires the SDK
-    Repo->>Service: await service.signIn()
-    
-    Service-->>User: Displays Google Account Picker (Native UI)
-    User->>Service: Selects Google Account
-    
-    Service-->>Repo: returns idToken (JWT from Google)
+    rect rgb(255, 243, 205)
+        Note over Repo, Service: 4. THE TRIGGER! Repository fires the SDK
+        Repo->>Service: ⚡️ await service.signIn()
+        
+        Service-->>User: Displays Google Account Picker (Native UI)
+        User->>Service: Selects Google Account
+        
+        Service-->>Repo: 🔑 RETURNS idToken (JWT from Google SDK)
+    end
     
     Note over Repo, Remote: 5. Exchange token with Backend
     Repo->>Remote: signInWithOAuth(provider: 'google', idToken)
