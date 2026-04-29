@@ -13,11 +13,13 @@ Status "Login" seorang pengguna memengaruhi hampir seluruh bagian aplikasi (buka
 
 #### Inisialisasi & Lifecycle
 - **Registrasi**: `AuthBloc` didaftarkan di dalam `lib/injection_container.dart` (oleh GetIt) sebagai _LazySingleton_. 
-- **Inisialisasi**: Fisik `AuthBloc` ditiupkan rohnya ke _Widget Tree_ _tertinggi_ (di akar layar) menggunakan `BlocProvider(create: (_) => sl<AuthBloc>())` di dalam file `main.dart`, persis membungkus `MaterialApp.router`.
+- **Inisialisasi**: Fisik `AuthBloc` ditempatkan ke _Widget Tree_ tertinggi menggunakan `BlocProvider<AuthBloc>.value(value: sl<AuthBloc>())` di dalam file `main.dart`, di dalam `MultiBlocProvider` yang membungkus `MaterialApp.router`.
 - **Siklus Hidup (Lifecycle)**: Karena BLoC ini dideklarasikan di puncak UI teratas, ia dikategorikan sebagai **Residen Abadi**. Ia lahir saat aplikasi dibuka dan baru akan mati (hancur) apabila pengguna menutup paksa *(Force Close)* aplikasi. Selama app berjalan, state *(User Profile + Token)* di dalam `AuthBloc` akan terus menetap di RAM.
 
 **Event yang Tersedia**: 
-`AuthCheckRequested`, `AuthLoginRequested`, `AuthRegisterRequested`, `AuthLogoutRequested`.
+`AuthCheckRequested`, `AuthLoginRequested`, `AuthRegisterRequested`, `AuthLogoutRequested`, `AuthProfileRequested`, `AuthUserUpdated`.
+
+> **`AuthUserUpdated`** adalah event khusus yang dilempar oleh `ProfileCubit` setelah berhasil update profil — agar data User di `AuthBloc` (global) ikut ter-refresh tanpa perlu logout dan login ulang.
 
 ### 2. Network & Token
 - Penyimpanan Token secara aman via `FlutterSecureStorage` (di `SecureTokenStorage`).
@@ -41,6 +43,7 @@ Status "Login" seorang pengguna memengaruhi hampir seluruh bagian aplikasi (buka
 | **HTTP Client** | `dio` | ^5.7.0 | Mengirimkan request `POST /login`, `POST /register`, `GET /profile`, dan `POST /refresh-token`. |
 | **Auth Interceptor** | `dio` → `Interceptor` | ^5.7.0 | Menyuntikkan header `Authorization: Bearer <token>` secara otomatis di setiap request, dan menangani `401 Unauthorized` dengan mekanisme silent refresh token. |
 | **Functional Error Handling** | `dartz` | ^0.10.1 | `Either<Failure, T>` digunakan di seluruh layer Repository untuk merepresentasikan hasil sukses atau gagal tanpa menggunakan `try-catch` di UI. |
+| **Google Sign-In** *(Planned)* | `google_sign_in` | ^6.x.x | Menghasilkan `idToken` dari akun Google via native OS popup. `idToken` dikirim ke backend untuk ditukar dengan JWT aplikasi. |
 
 ---
 
@@ -140,3 +143,154 @@ flowchart TD
     class ReturnLocal warning;
     class ReturnError error;
 ```
+
+---
+
+## Login Methods
+
+Aplikasi mendukung dua jenis metode login yang memiliki alur berbeda, namun berakhir di titik yang sama: mendapatkan JWT (accessToken + refreshToken) dari backend.
+
+### Perbandingan Email/Password vs Social Login
+
+| Aspek | Email & Password | Social Login (Google, dll) |
+|-------|-----------------|-----------------------------|
+| **Credential asal** | User input langsung di form | Provider eksternal (Google, Apple, GitHub) |
+| **Yang dikirim ke BE** | `{ email, password }` | `{ provider, idToken }` |
+| **Endpoint BE** | `POST /auth/login` | `POST /auth/oauth` |
+| **Verifikasi di BE** | Cek hash password di DB | Verifikasi idToken ke server provider |
+| **UI Popup** | Tidak ada | Native OS picker (bukan halaman Flutter baru) |
+| **Halaman Flutter baru?** | Tidak | Tidak — semua tombol ada di `LoginPage` yang sama |
+| **Status Implementasi** | ✅ Done | 🔄 Planned (Google Sign-In first) |
+
+---
+
+## Social Login — Rencana Implementasi
+
+### Filosofi Desain: Extensible OAuth
+
+Social Login dirancang dengan abstraksi `OAuthProvider` agar setiap provider baru (GitHub, Apple, Facebook) cukup menambah satu class implementasi tanpa mengubah BLoC, UseCase, atau Repository.
+
+```
+Domain Layer:
+  abstract OAuthProvider
+    └── getIdToken() → Future<String>
+
+Data Layer:
+  GoogleOAuthProvider  implements OAuthProvider
+  GithubOAuthProvider  implements OAuthProvider  (future)
+  AppleOAuthProvider   implements OAuthProvider  (future, App Store required)
+
+UseCase:
+  SocialLoginUseCase.call(OAuthProvider provider)
+    → provider.getIdToken()
+    → repository.loginWithOAuth(idToken, providerName)
+
+AuthBloc:
+  add(AuthSocialLoginRequested(provider: GoogleOAuthProvider()))
+  add(AuthSocialLoginRequested(provider: GithubOAuthProvider()))   // future
+```
+
+> [!IMPORTANT]
+> **Apple Sign-In wajib ada** jika app dipublish di App Store dan menawarkan social login provider lain. Ini adalah aturan App Store Review Guidelines — app bisa direject jika tidak ada.
+
+### Diagram 4 — Google Sign-In Flow
+
+Berbeda dengan login email/password yang langsung mengirim credential ke backend, Google Sign-In memerlukan langkah perantara: mendapatkan `idToken` dari Google terlebih dahulu.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant LP as LoginPage (Flutter)
+    participant OS as Native OS (Google SDK)
+    participant Bloc as AuthBloc
+    participant Repo as AuthRepositoryImpl
+    participant Google as Google API Server
+    participant BE as Backend (Go)
+    participant Store as FlutterSecureStorage
+    participant Router as GoRouter
+
+    User->>LP: Tap [G Lanjutkan dengan Google]
+    LP->>Bloc: add(AuthSocialLoginRequested(GoogleOAuthProvider))
+    Bloc->>OS: GoogleSignIn().signIn()
+    Note over OS: Native Google Account Picker muncul
+    Note over LP: LoginPage tetap di stack, kontrol di OS
+
+    User->>OS: Pilih akun Google
+    OS-->>Bloc: GoogleSignInAccount (idToken)
+
+    Bloc->>Repo: loginWithOAuth(idToken, provider: 'google')
+    Repo->>BE: POST /auth/oauth { provider, idToken }
+    BE->>Google: Verifikasi idToken
+    Google-->>BE: { email, name, googleId } valid
+
+    alt User belum ada di DB
+        BE->>BE: Buat user baru dari data Google
+    else User sudah ada
+        BE->>BE: Login langsung
+    end
+
+    BE-->>Repo: { accessToken, refreshToken, user }
+    Repo->>Store: saveTokens(accessToken, refreshToken)
+    Repo-->>Bloc: Right(User)
+
+    Bloc->>Bloc: emit(AuthAuthenticated(user))
+    Bloc-->>Router: notifyListeners()
+    Router-->>LP: Auto-redirect ke /dashboard
+```
+
+### Diagram 5 — Perbandingan Alur: Email vs Google
+
+```mermaid
+graph TD
+    A([User buka LoginPage]) --> B{Pilih metode login}
+
+    B -->|Email & Password| C[Isi form email + password]
+    C --> D[add AuthLoginRequested]
+    D --> E[POST /auth/login]
+    E --> F[BE verifikasi password hash]
+
+    B -->|Google Sign-In| G[Tap tombol G]
+    G --> H[Native OS Google Picker]
+    H --> I[Pilih akun Google]
+    I --> J[Dapat idToken dari Google SDK]
+    J --> K[add AuthSocialLoginRequested]
+    K --> L[POST /auth/oauth]
+    L --> M[BE verifikasi idToken ke Google API]
+
+    F --> N[BE return accessToken + refreshToken]
+    M --> N
+
+    N --> O[Simpan token ke SecureStorage]
+    O --> P[emit AuthAuthenticated]
+    P --> Q([GoRouter redirect /dashboard])
+```
+
+### Kebutuhan Setup per Platform
+
+#### Flutter Side
+- Tambah package `google_sign_in: ^6.x.x` di `pubspec.yaml`
+- Tambah event `AuthSocialLoginRequested` di `AuthBloc`
+- Buat `GoogleOAuthProvider` di Data Layer
+- Buat `SocialLoginUseCase` di Domain Layer
+- Tambah tombol Google di `LoginPage` (di bawah tombol login biasa)
+
+#### Android
+- Tambah SHA-1 fingerprint di Google Cloud Console
+- Tambah `google-services.json` di `android/app/`
+- Update `build.gradle` dengan Google Services plugin
+
+#### iOS
+- Tambah `REVERSED_CLIENT_ID` ke `Info.plist`
+- Pastikan URL Scheme terdaftar
+
+#### Backend (Go)
+- Endpoint baru: `POST /api/v1/auth/oauth`
+- Tambah library verifikasi Google ID Token
+- Logic upsert user: buat jika belum ada, login jika sudah ada
+- Return format sama dengan login biasa: `{ accessToken, refreshToken, user }`
+
+#### Google Cloud Console
+- Buat project baru atau gunakan yang existing
+- Enable "Google Sign-In API"
+- Buat OAuth 2.0 Client ID untuk Android dan iOS
+- Daftarkan SHA-1 fingerprint
