@@ -22,9 +22,9 @@ Dokumen ini memuat rencana eksekusi *end-to-end* untuk mengimplementasikan fitur
   - Tambah fungsi `LinkGoogleID(userID int64, googleID string) error`.
 
 ### 3. Integrasi SDK Google & Service Logic
-- [ ] Tambahkan *dependency*: `go get google.golang.org/api/idtoken`.
-- [ ] Update `AuthService` untuk menambahkan metode `OAuthLogin(ctx context.Context, provider string, idToken string)`.
-- [ ] Implementasikan logika *Decision Tree* di `AuthService`:
+- [x] Tambahkan *dependency*: `go get google.golang.org/api/idtoken`.
+- [x] Update `AuthService` untuk menambahkan metode `OAuthLogin(ctx context.Context, provider string, idToken string)`.
+- [x] Implementasikan logika *Decision Tree* di `AuthService`:
   1. Verifikasi `idToken` ke Google.
   2. Ekstrak `email`, `name`, `sub` (Google ID).
   3. Coba `FindByGoogleID`. Jika ketemu → Login.
