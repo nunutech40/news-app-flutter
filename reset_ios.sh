@@ -44,23 +44,41 @@ echo "✅ Pods, Podfile.lock, dan xcworkspace dihapus."
 echo ""
 
 # [4/6] Hapus DerivedData Xcode yang korup
-# PENTING: Xcode harus ditutup dulu agar tidak mengunci file DerivedData.
-# Script ini akan menutup Xcode otomatis, membersihkan DerivedData, lalu membukanya kembali.
-echo "🗄️  [4/6] Menutup Xcode & hapus DerivedData yang korup..."
+# PENTING: File DerivedData dikunci oleh beberapa proses background, bukan hanya Xcode:
+#   - Xcode itu sendiri
+#   - XCBBuildService (Xcode background build worker, tetap jalan meski Xcode ditutup)
+#   - sourcekit-lsp (Apple Language Server untuk Swift)
+#   - Dart Analysis Server (dijalankan VS Code/Cursor/IDE saat project terbuka)
+# Semua harus dimatikan dulu sebelum DerivedData bisa dihapus dengan bersih.
+echo "🗄️  [4/6] Mematikan proses yang mengunci DerivedData..."
+
+# Tutup Xcode
 if pgrep -x "Xcode" > /dev/null; then
-  echo "   → Xcode sedang berjalan, menutup otomatis..."
+  echo "   → Menutup Xcode..."
   killall Xcode 2>/dev/null || true
-  sleep 2  # Tunggu Xcode benar-benar tertutup
-  echo "   → Xcode ditutup."
-else
-  echo "   → Xcode tidak berjalan, lanjut langsung."
 fi
+
+# Matikan Xcode background build services
+echo "   → Mematikan Xcode background services (XCBBuildService, sourcekit-lsp)..."
+pkill -f "XCBBuildService" 2>/dev/null || true
+pkill -f "sourcekit-lsp" 2>/dev/null || true
+pkill -f "swift-frontend" 2>/dev/null || true
+pkill -f "com.apple.dt.SKAgent" 2>/dev/null || true
+
+# Matikan Dart Analysis Server (yang dijalankan VS Code/Cursor/IDE)
+echo "   → Mematikan Dart Analysis Server (IDE background process)..."
+pkill -f "analysis_server" 2>/dev/null || true
+pkill -f "dart_language_server" 2>/dev/null || true
+pkill -f "DartAnalysisServer" 2>/dev/null || true
+
+sleep 2  # Tunggu semua proses benar-benar berhenti
+
+echo "   → Menghapus DerivedData..."
 rm -rf ~/Library/Developer/Xcode/DerivedData/ModuleCache.noindex
 rm -rf ~/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex
-# Hapus DerivedData spesifik project ini
 rm -rf ~/Library/Developer/Xcode/DerivedData/Runner-*
 rm -rf ~/Library/Developer/Xcode/DerivedData/Pods-*
-echo "✅ DerivedData bersih."
+echo "✅ Semua proses dimatikan & DerivedData bersih."
 echo ""
 
 # [5/6] Pod Install Ulang
