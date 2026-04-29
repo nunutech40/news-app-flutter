@@ -215,8 +215,7 @@ class _LoginPageState extends State<LoginPage>
                                             context.read<AuthBloc>().add(
                                               AuthOAuthLoginRequested(
                                                 GoogleOAuthService(
-                                                  // serverClientId diinject via env / config nanti jika perlu, 
-                                                  // tapi sementara biarkan null jika mengambil dari strings.xml
+                                                  serverClientId: ApiConstants.googleWebClientId,
                                                 ),
                                               ),
                                             );

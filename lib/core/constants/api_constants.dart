@@ -12,6 +12,9 @@ class ApiConstants {
   static const String logout = '/api/v1/auth/logout';
   static const String health = '/health';
 
+  // OAuth Clients
+  static const String googleWebClientId = '916008211568-jr1dp3gbnvfc4nnal0toptbvepr3e3ma.apps.googleusercontent.com';
+
   // News endpoints
   static const String newsCategories = '/api/v1/news/categories';
   static const String newsFeed = '/api/v1/news';
