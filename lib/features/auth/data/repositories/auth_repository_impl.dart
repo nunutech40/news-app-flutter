@@ -7,7 +7,7 @@ import 'package:news_app/features/auth/data/models/user_model.dart';
 import 'package:news_app/features/auth/domain/entities/auth_tokens.dart';
 import 'package:news_app/features/auth/domain/entities/user.dart';
 import 'package:news_app/features/auth/domain/repositories/auth_repository.dart';
-import 'package:news_app/features/auth/domain/providers/oauth_provider.dart';
+import 'package:news_app/features/auth/domain/services/oauth_service.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDatasource remoteDatasource;
@@ -74,14 +74,14 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, AuthTokens>> signInWithOAuth(OAuthProvider provider) async {
+  Future<Either<Failure, AuthTokens>> signInWithOAuth(OAuthService service) async {
     try {
       // 1. Get token from the provider (e.g. Google SDK popup)
-      final idToken = await provider.signIn();
+      final idToken = await service.signIn();
 
       // 2. Exchange token with our backend
       final tokens = await remoteDatasource.signInWithOAuth(
-        provider: provider.providerName,
+        provider: service.providerName,
         idToken: idToken,
       );
 

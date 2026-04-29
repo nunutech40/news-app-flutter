@@ -26,6 +26,16 @@ class AuthLoginRequested extends AuthEvent {
   List<Object?> get props => [email, password];
 }
 
+/// Login with an OAuth provider
+class AuthOAuthLoginRequested extends AuthEvent {
+  final OAuthService service;
+
+  const AuthOAuthLoginRequested(this.service);
+
+  @override
+  List<Object?> get props => [service];
+}
+
 /// Register a new account
 class AuthRegisterRequested extends AuthEvent {
   final String name;

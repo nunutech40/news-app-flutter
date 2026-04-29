@@ -7,6 +7,8 @@ import 'package:news_app/features/auth/domain/usecases/get_profile_usecase.dart'
 import 'package:news_app/features/auth/domain/usecases/login_usecase.dart';
 import 'package:news_app/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:news_app/features/auth/domain/usecases/register_usecase.dart';
+import 'package:news_app/features/auth/domain/usecases/social_login_usecase.dart';
+import 'package:news_app/features/auth/domain/services/oauth_service.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -16,6 +18,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final RegisterUseCase registerUseCase;
   final GetProfileUseCase getProfileUseCase;
   final LogoutUseCase logoutUseCase;
+  final SocialLoginUseCase socialLoginUseCase;
   final AuthRepository authRepository;
 
   AuthBloc({
@@ -23,10 +26,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.registerUseCase,
     required this.getProfileUseCase,
     required this.logoutUseCase,
+    required this.socialLoginUseCase,
     required this.authRepository,
   }) : super(const AuthState()) {
     on<AuthCheckRequested>(_onCheckRequested);
     on<AuthLoginRequested>(_onLoginRequested);
+    on<AuthOAuthLoginRequested>(_onOAuthLoginRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
     on<AuthProfileRequested>(_onProfileRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
@@ -64,6 +69,37 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final result = await loginUseCase(
       LoginParams(email: event.email, password: event.password),
     );
+
+    await result.fold(
+      (failure) async {
+        emit(state.copyWith(
+          status: AuthStatus.error,
+          errorMessage: failure.message,
+        ));
+      },
+      (tokens) async {
+        // After login, fetch profile
+        final profileResult = await getProfileUseCase(const NoParams());
+        profileResult.fold(
+          (failure) => emit(state.copyWith(
+            status: AuthStatus.authenticated,
+          )),
+          (user) => emit(state.copyWith(
+            status: AuthStatus.authenticated,
+            user: user,
+          )),
+        );
+      },
+    );
+  }
+
+  Future<void> _onOAuthLoginRequested(
+    AuthOAuthLoginRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(state.copyWith(status: AuthStatus.loading));
+
+    final result = await socialLoginUseCase(event.service);
 
     await result.fold(
       (failure) async {

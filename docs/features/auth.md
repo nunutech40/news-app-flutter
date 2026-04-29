@@ -294,3 +294,66 @@ graph TD
 - Enable "Google Sign-In API"
 - Buat OAuth 2.0 Client ID untuk Android dan iOS
 - Daftarkan SHA-1 fingerprint
+
+---
+
+## Social Login Architecture Flow
+Unlike the standard login flow where raw data (`email` and `password` strings) is passed from the UI down to the data layer, the Social Login flow passes a **Behavioral Object** (`OAuthService`). 
+
+The UI creates the `OAuthService` object (e.g., `GoogleOAuthService`), but **does not execute it**. The object travels through the layers until it reaches the `AuthRepository`, which is responsible for "pulling the trigger" (`service.signIn()`) to execute the native SDK logic and fetch the token.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    
+    actor User
+    participant UI as LoginPage (UI)
+    participant Bloc as AuthBloc (Presentation)
+    participant UC as SocialLoginUseCase (Domain)
+    participant Repo as AuthRepositoryImpl (Data)
+    participant Service as GoogleOAuthService (Data/SDK)
+    participant Remote as AuthRemoteDataSource (Data)
+    participant API as Go Backend API
+    participant Local as AuthLocalDataSource (Data)
+
+    User->>UI: Taps "Sign in with Google" button
+    
+    Note over UI, Bloc: 1. UI ONLY INSTANTIATES the service
+    UI->>Bloc: add(AuthOAuthLoginRequested(GoogleOAuthService()))
+    
+    Bloc->>Bloc: emit(AuthStatus.loading)
+    
+    Note over Bloc, UC: 2. BLoC passes service to UseCase
+    Bloc->>UC: call(GoogleOAuthService)
+    
+    Note over UC, Repo: 3. UseCase delegates to Repository
+    UC->>Repo: signInWithOAuth(GoogleOAuthService)
+    
+    Note over Repo, Service: 4. THE TRIGGER! Repository fires the SDK
+    Repo->>Service: await service.signIn()
+    
+    Service-->>User: Displays Google Account Picker (Native UI)
+    User->>Service: Selects Google Account
+    
+    Service-->>Repo: returns idToken (JWT from Google)
+    
+    Note over Repo, Remote: 5. Exchange token with Backend
+    Repo->>Remote: signInWithOAuth(provider: 'google', idToken)
+    
+    Remote->>API: POST /api/v1/auth/oauth {provider, id_token}
+    API-->>Remote: Returns AuthTokens (accessToken, refreshToken)
+    Remote-->>Repo: Returns AuthTokensModel
+    
+    Note over Repo, Local: 6. Save tokens securely
+    Repo->>Local: saveTokens(accessToken, refreshToken)
+    
+    Repo-->>UC: Right(AuthTokens)
+    UC-->>Bloc: Right(AuthTokens)
+    
+    Note over Bloc, API: 7. BLoC automatically fetches user profile
+    Bloc->>API: Fetch Profile
+    API-->>Bloc: Returns UserModel
+    
+    Bloc->>UI: emit(AuthStatus.authenticated, user)
+    UI-->>User: Navigates to Dashboard
+```

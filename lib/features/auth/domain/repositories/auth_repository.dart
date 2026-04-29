@@ -2,7 +2,7 @@ import 'package:dartz/dartz.dart';
 import 'package:news_app/core/error/failures.dart';
 import 'package:news_app/features/auth/domain/entities/auth_tokens.dart';
 import 'package:news_app/features/auth/domain/entities/user.dart';
-import 'package:news_app/features/auth/domain/providers/oauth_provider.dart';
+import 'package:news_app/features/auth/domain/services/oauth_service.dart';
 
 abstract class AuthRepository {
   /// Register a new user
@@ -19,7 +19,7 @@ abstract class AuthRepository {
   });
 
   /// Login with an OAuth provider
-  Future<Either<Failure, AuthTokens>> signInWithOAuth(OAuthProvider provider);
+  Future<Either<Failure, AuthTokens>> signInWithOAuth(OAuthService service);
 
   /// Get current user profile
   Future<Either<Failure, User>> getProfile();

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:news_app/core/theme/app_theme.dart';
+import 'package:news_app/features/auth/data/services/google_oauth_service.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:news_app/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:news_app/core/utils/validators.dart';
@@ -180,6 +181,54 @@ class _LoginPageState extends State<LoginPage>
                           ),
                           const SizedBox(height: 24),
 
+                          // --- Social Login Divider ---
+                          Row(
+                            children: [
+                              Expanded(child: Divider(color: AppTheme.surfaceElevated)),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                child: Text(
+                                  'Or sign in with',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppTheme.textMuted,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              Expanded(child: Divider(color: AppTheme.surfaceElevated)),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+
+                          // --- Social Login Buttons ---
+                          BlocBuilder<AuthBloc, AuthState>(
+                            builder: (context, state) {
+                              final isLoading = state.status == AuthStatus.loading;
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _SocialButton(
+                                    iconPath: 'assets/images/google_icon.png', // Fallback to an icon if you want, or use a Widget
+                                    onPressed: isLoading
+                                        ? null
+                                        : () {
+                                            context.read<AuthBloc>().add(
+                                              AuthOAuthLoginRequested(
+                                                GoogleOAuthService(
+                                                  // serverClientId diinject via env / config nanti jika perlu, 
+                                                  // tapi sementara biarkan null jika mengambil dari strings.xml
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                  ),
+                                  // Apple button bisa ditambah di sini
+                                ],
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 32),
+
                           // Register link
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -274,6 +323,46 @@ class _GradientButton extends StatelessWidget {
                       letterSpacing: 0.5,
                     ),
                   ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SocialButton extends StatelessWidget {
+  final String iconPath;
+  final VoidCallback? onPressed;
+
+  const _SocialButton({
+    required this.iconPath,
+    this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).cardColor,
+      borderRadius: BorderRadius.circular(16),
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.05),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: 64,
+          height: 64,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppTheme.surfaceElevated),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Center(
+            child: Image.network( // Menggunakan network image sementara
+              'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png',
+              width: 28,
+              height: 28,
+            ),
           ),
         ),
       ),

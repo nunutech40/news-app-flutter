@@ -11,6 +11,7 @@ import 'package:news_app/features/auth/domain/usecases/get_profile_usecase.dart'
 import 'package:news_app/features/auth/domain/usecases/login_usecase.dart';
 import 'package:news_app/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:news_app/features/auth/domain/usecases/register_usecase.dart';
+import 'package:news_app/features/auth/domain/usecases/social_login_usecase.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 
 
@@ -38,6 +39,7 @@ class MockLoginUseCase extends Mock implements LoginUseCase {}
 class MockRegisterUseCase extends Mock implements RegisterUseCase {}
 class MockGetProfileUseCase extends Mock implements GetProfileUseCase {}
 class MockLogoutUseCase extends Mock implements LogoutUseCase {}
+class MockSocialLoginUseCase extends Mock implements SocialLoginUseCase {}
 class MockAuthRepository extends Mock implements AuthRepository {}
 
 void main() {
@@ -46,6 +48,7 @@ void main() {
   late MockRegisterUseCase mockRegisterUseCase;
   late MockGetProfileUseCase mockGetProfileUseCase;
   late MockLogoutUseCase mockLogoutUseCase;
+  late MockSocialLoginUseCase mockSocialLoginUseCase;
   late MockAuthRepository mockAuthRepository;
 
   setUpAll(() {
@@ -59,6 +62,7 @@ void main() {
     mockRegisterUseCase = MockRegisterUseCase();
     mockGetProfileUseCase = MockGetProfileUseCase();
     mockLogoutUseCase = MockLogoutUseCase();
+    mockSocialLoginUseCase = MockSocialLoginUseCase();
     mockAuthRepository = MockAuthRepository();
 
     bloc = AuthBloc(
@@ -66,6 +70,7 @@ void main() {
       registerUseCase: mockRegisterUseCase,
       getProfileUseCase: mockGetProfileUseCase,
       logoutUseCase: mockLogoutUseCase,
+      socialLoginUseCase: mockSocialLoginUseCase,
       authRepository: mockAuthRepository,
     );
   });

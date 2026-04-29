@@ -20,6 +20,7 @@ import 'package:news_app/features/auth/domain/usecases/login_usecase.dart';
 import 'package:news_app/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:news_app/features/auth/domain/usecases/register_usecase.dart';
 import 'package:news_app/features/auth/domain/usecases/update_profile_usecase.dart';
+import 'package:news_app/features/auth/domain/usecases/social_login_usecase.dart';
 
 // Auth - Presentation
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
@@ -149,6 +150,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => GetProfileUseCase(sl()));
   sl.registerLazySingleton(() => UpdateProfileUseCase(sl(), sl()));
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
+  sl.registerLazySingleton(() => SocialLoginUseCase(sl()));
 
   // ==================== BLoC ====================
   // GlobalAlertBloc is a singleton covering the whole app to intercept Dio network errors automatically
@@ -168,6 +170,7 @@ Future<void> initDependencies() async {
       registerUseCase: sl(),
       getProfileUseCase: sl(),
       logoutUseCase: sl(),
+      socialLoginUseCase: sl(),
       authRepository: sl(),
     ),
   );
