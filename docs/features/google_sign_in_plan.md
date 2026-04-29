@@ -7,8 +7,8 @@ Dokumen ini memuat rencana eksekusi *end-to-end* untuk mengimplementasikan fitur
 ## FASE 1: Backend (Go)
 
 ### 1. Database Migration
-- [ ] Buat file migrasi baru: `free-api-news/migrations/011_add_oauth_support.sql`.
-- [ ] Implementasikan SQL script sesuai rancangan:
+- [x] Buat file migrasi baru: `free-api-news/migrations/011_add_oauth_support.sql`.
+- [x] Implementasikan SQL script sesuai rancangan:
   - `ALTER TABLE users ALTER COLUMN password DROP NOT NULL;`
   - Tambahkan kolom `google_id VARCHAR(255) UNIQUE`.
   - Tambahkan kolom `auth_provider VARCHAR(20) DEFAULT 'local'`.
