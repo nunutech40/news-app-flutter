@@ -1524,27 +1524,95 @@ All other paths automatically get Bearer token injected.
 
 ### 13.1 GoRouter Configuration
 
-Auth-aware declarative routing:
+`AppRouter` menerima `AuthBloc` sebagai dependency injection dari `main.dart` — bukan mengambilnya sendiri dari GetIt — agar router tetap testable dan decoupled dari service locator.
 
 ```dart
-GoRouter(
-  redirect: (context, state) {
-    if (unauthenticated && !isOnAuthPage) -> '/login'
-    if (authenticated && isOnAuthPage)    -> '/dashboard'
-  },
-  refreshListenable: GoRouterRefreshStream(authBloc.stream),
-)
+// main.dart — inject AuthBloc ke AppRouter
+final appRouter = AppRouter(
+  authBloc: context.read<AuthBloc>(), // ambil dari MultiBlocProvider di atasnya
+);
+
+// app_router.dart
+class AppRouter {
+  final AuthBloc authBloc;
+
+  late final GoRouter router = GoRouter(
+    navigatorKey: rootNavigatorKey, // kunci untuk GlobalAlertBloc
+    initialLocation: '/splash',
+    refreshListenable: GoRouterRefreshStream(authBloc.stream), // dengarkan AuthBloc
+    redirect: (context, state) { ... },
+    routes: [ ... ],
+  );
+}
 ```
 
-### 13.2 Route Map
+#### GoRouterRefreshStream
 
-| Path | Page | Auth Required | Redirect Behavior |
-|------|------|---------------|-------------------|
-| `/splash` | `SplashPage` | - | → `/login` if unauth, or `/dashboard` if auth |
-| `/login` | `LoginPage` | No | → `/dashboard` if already authenticated |
-| `/register` | `RegisterPage` | No | → `/dashboard` if already authenticated |
-| `/dashboard` | `DashboardPage` (Shell) | Yes | → `/login` if unauthenticated. Render: IndexedStack 5 tab |
-| `/article/:slug` | `NewsDetailPage` | Yes | Pushed on top of dashboard via `context.push()` |
+Karena GoRouter hanya mengenal `Listenable` (bukan `Stream`), kita gunakan adapter `GoRouterRefreshStream` yang mengubah `Stream<AuthState>` menjadi `ChangeNotifier`. Ia hanya notify GoRouter jika `AuthStatus` benar-benar berubah (bukan setiap emit).
+
+```dart
+// Hanya notify jika STATUS berubah, bukan setiap emit
+if (_lastStatus != state.status) {
+  _lastStatus = state.status;
+  notifyListeners(); // → GoRouter terpanggil → redirect() dievaluasi
+}
+```
+
+#### Redirect Logic (3 Aturan)
+
+| # | Kondisi | Aksi |
+|---|---------|------|
+| 1 | `AuthStatus.initial` + sedang di `/splash` | Tetap di `/splash` (tunggu cek token selesai) |
+| 2 | `AuthStatus.unauthenticated` + bukan di halaman auth | Paksa ke `/login` |
+| 3 | `AuthStatus.authenticated` + di `/login`, `/register`, atau `/splash` | Paksa ke `/dashboard` |
+| — | Tidak ada pelanggaran | `null` — biarkan navigasi berjalan normal |
+
+### 13.2 Route Map & BLoC Provider Scope
+
+#### Struktur Route Tree
+
+```
+GoRouter (initialLocation: /splash)
+│
+├── /splash          → SplashPage
+│     BLoC scope: tidak ada (stateless)
+│     Auth guard: Tetap di sini saat AuthStatus.initial
+│
+├── /login           → LoginPage
+│     BLoC scope: tidak ada (AuthBloc dari root)
+│     Auth guard: Redirect /dashboard jika sudah authenticated
+│
+├── /register        → RegisterPage
+│     BLoC scope: tidak ada (AuthBloc dari root)
+│     Auth guard: Redirect /dashboard jika sudah authenticated
+│
+├── /dashboard       → MultiBlocProvider → DashboardPage (Shell)
+│     BLoC scope: 6 Cubit dibuat di sini (hidup selama /dashboard aktif)
+│     │   CategoryCubit    ..load()           (auto-load saat route dibuat)
+│     │   TrendingCubit    ..load()           (auto-load saat route dibuat)
+│     │   NewsFeedCubit    ..load()           (auto-load saat route dibuat)
+│     │   SearchCubit      (lazy, tunggu user search)
+│     │   ExploreCubit     (lazy, tunggu user buka tab)
+│     │   BookmarkCubit    ..loadBookmarks()  (auto-load saat route dibuat)
+│     Auth guard: Redirect /login jika unauthenticated
+│     Inside: IndexedStack → 5 tab (lihat Section 13.4)
+│
+└── /article/:slug   → BlocProvider → NewsDetailPage
+      BLoC scope: ArticleDetailCubit (hidup hanya selama halaman ini aktif)
+      Auth guard: Redirect /login jika unauthenticated
+      Navigation: Di-push di ATAS /dashboard via context.push()
+                  → Back button kembali ke /dashboard (state tab tetap)
+```
+
+#### Tabel Route
+
+| Path | Named Route | Page | BLoC Provider | Auth | Cara Buka |
+|------|-------------|------|---------------|------|-----------|
+| `/splash` | `splash` | `SplashPage` | — | — | `initialLocation` |
+| `/login` | `login` | `LoginPage` | — | No | GoRouter redirect / `context.go()` |
+| `/register` | `register` | `RegisterPage` | — | No | `context.push('/register')` |
+| `/dashboard` | `dashboard` | `DashboardPage` | `MultiBlocProvider` 6 Cubit | **Yes** | GoRouter redirect |
+| `/article/:slug` | `articleDetail` | `NewsDetailPage` | `BlocProvider` 1 Cubit | **Yes** | `context.push('/article/$slug')` |
 
 > [!NOTE]
 > `DashboardPage` adalah **shell/wrapper** yang menampung `BottomNavigationBar` dengan 5 tab:
@@ -1555,6 +1623,26 @@ GoRouter(
 > - Tab 4: `ProfilePage` (Profil)
 >
 > `ProfilePage` tidak memiliki route tersendiri — ia di-render via `IndexedStack` di dalam `DashboardPage`.
+
+#### Kenapa `/article/:slug` Setara dengan `/dashboard`, Bukan Child-nya?
+
+`/article/:slug` adalah **sibling** dari `/dashboard`, bukan nested child. Ini intentional:
+
+- **Dibuka dengan `context.push()`** → ditumpuk di atas `/dashboard`
+- **Back button** → kembali ke `/dashboard`, state tab tidak hilang
+- Jika dijadikan child route dalam `/dashboard`, dia masuk ke dalam `IndexedStack` dan tidak bisa di-push dengan benar
+
+```
+Navigation stack saat buka artikel:
+┌─────────────────────────────┐  ← /article/:slug (on top)
+│ NewsDetailPage              │
+└─────────────────────────────┘
+┌─────────────────────────────┐  ← /dashboard (tetap ada di bawah)
+│ DashboardPage (IndexedStack)│
+└─────────────────────────────┘
+```
+
+
 
 ### 13.3 Navigation Flow
 
