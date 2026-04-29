@@ -46,7 +46,7 @@ News App adalah aplikasi mobile berbasis Flutter yang mengkonsumsi REST API untu
 
 | Module | Features | Priority | Status |
 |--------|----------|----------|--------|
-| **Auth** | Register, Login, Profile Update (Avatar/Bio/Phone), Logout, Token Refresh | P0 - Core | ✅ Done |
+| **Auth** | Register, Login (Regular & Google OAuth), Profile Update (Avatar/Bio/Phone), Logout, Token Refresh | P0 - Core | ✅ Done |
 | **Dashboard** | Shell BottomNavigationBar (5 tabs: Berita, Jelajah, Cari, Simpan, Profil) | P0 - Core | ✅ Done |
 | **News Feed** | Browse artikel, filter kategori, trending, refresh | P0 - Core | ✅ Done |
 | **Explore** | Browse artikel per kategori dengan pagination | P1 - Core | ✅ Done |
@@ -150,6 +150,12 @@ Presentation -> Domain <- Data
 |---------|---------|----------|---------------|
 | **flutter_secure_storage** | ^9.2.4 | Token storage - sensitive | Menggunakan **Keychain** di iOS dan **EncryptedSharedPreferences** di Android. Data terenkripsi at-rest. |
 | **shared_preferences** | ^2.5.3 | Profile cache - non-sensitive | Key-value storage ringan untuk data non-sensitif seperti cache nama dan email. |
+
+#### Authentication
+
+| Library | Version | Justification | Alternatif yang Dipertimbangkan |
+|---------|---------|---------------|-------------------------------|
+| **google_sign_in** | ^6.2.1 | Official plugin untuk integrasi Google OAuth. Mengamankan alur login sosial langsung dengan native credential manager Android/iOS. | Manual OAuth WebView — rentan keamanan dan pengalaman pengguna kurang mulus. |
 
 #### Functional Programming
 
@@ -689,6 +695,26 @@ Request Body:
 {
     "email": "string",
     "password": "string"
+}
+
+Success Response (200):
+{
+    "success": true,
+    "data": {
+        "access_token": "eyJhbG...",
+        "refresh_token": "eyJhbG..."
+    }
+}
+```
+
+#### OAuth Google Login
+
+```
+POST /api/v1/auth/oauth/google
+
+Request Body:
+{
+    "id_token": "string"
 }
 
 Success Response (200):

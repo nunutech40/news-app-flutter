@@ -73,7 +73,8 @@ class _LoginPageState extends State<LoginPage>
           if (state.status == AuthStatus.error && state.errorMessage != null) {
             final msg = state.errorMessage!;
             // Ignore network errors, they are handled completely by GlobalAlertBloc
-            if (msg.contains('No internet connection') || msg.contains('Connection timed out')) {
+            if (msg.contains('No internet connection') ||
+                msg.contains('Connection timed out')) {
               return;
             }
 
@@ -110,8 +111,8 @@ class _LoginPageState extends State<LoginPage>
                                     BorderRadius.circular(AppTheme.radiusLg),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppTheme.primaryColor
-                                        .withOpacity(0.35),
+                                    color:
+                                        AppTheme.primaryColor.withOpacity(0.35),
                                     blurRadius: 24,
                                     spreadRadius: 2,
                                   ),
@@ -185,18 +186,26 @@ class _LoginPageState extends State<LoginPage>
                           // --- Social Login Divider ---
                           Row(
                             children: [
-                              Expanded(child: Divider(color: AppTheme.surfaceElevated)),
+                              Expanded(
+                                  child:
+                                      Divider(color: AppTheme.surfaceElevated)),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
                                 child: Text(
                                   'Or sign in with',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppTheme.textMuted,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: AppTheme.textMuted,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                 ),
                               ),
-                              Expanded(child: Divider(color: AppTheme.surfaceElevated)),
+                              Expanded(
+                                  child:
+                                      Divider(color: AppTheme.surfaceElevated)),
                             ],
                           ),
                           const SizedBox(height: 24),
@@ -204,22 +213,26 @@ class _LoginPageState extends State<LoginPage>
                           // --- Social Login Buttons ---
                           BlocBuilder<AuthBloc, AuthState>(
                             builder: (context, state) {
-                              final isLoading = state.status == AuthStatus.loading;
+                              final isLoading =
+                                  state.status == AuthStatus.loading;
                               return Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   _SocialButton(
-                                    iconPath: 'assets/images/google_icon.png', // Fallback to an icon if you want, or use a Widget
+                                    iconPath:
+                                        'assets/images/google_icon.png', // Fallback to an icon if you want, or use a Widget
                                     onPressed: isLoading
                                         ? null
                                         : () {
                                             context.read<AuthBloc>().add(
-                                              AuthOAuthLoginRequested(
-                                                GoogleOAuthService(
-                                                  serverClientId: ApiConstants.googleWebClientId,
-                                                ),
-                                              ),
-                                            );
+                                                  AuthOAuthLoginRequested(
+                                                    GoogleOAuthService(
+                                                      serverClientId:
+                                                          ApiConstants
+                                                              .googleWebClientId,
+                                                    ),
+                                                  ),
+                                                );
                                           },
                                   ),
                                   // Apple button bisa ditambah di sini
@@ -310,8 +323,7 @@ class _GradientButton extends StatelessWidget {
                     height: 24,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(Colors.white),
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   )
                 : Text(
@@ -358,7 +370,8 @@ class _SocialButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
           ),
           child: Center(
-            child: Image.network( // Menggunakan network image sementara
+            child: Image.network(
+              // Menggunakan network image sementara
               'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png',
               width: 28,
               height: 28,
