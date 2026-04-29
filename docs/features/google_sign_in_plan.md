@@ -57,15 +57,15 @@ Dokumen ini memuat rencana eksekusi *end-to-end* untuk mengimplementasikan fitur
 ## FASE 3: Frontend (Flutter)
 
 ### 1. Domain Layer
-- [ ] Definisikan `abstract class OAuthProvider` (sudah dirancang di `auth.md`).
-- [ ] Update `AuthRepository` interface: `Future<Either<Failure, User>> signInWithOAuth(OAuthProvider provider)`.
-- [ ] Buat/Update `SocialLoginUseCase` yang memanggil *repository* tersebut.
+- [x] Definisikan `abstract class OAuthProvider` (sudah dirancang di `auth.md`).
+- [x] Update `AuthRepository` interface: `Future<Either<Failure, User>> signInWithOAuth(OAuthProvider provider)`.
+- [x] Buat/Update `SocialLoginUseCase` yang memanggil *repository* tersebut.
 
 ### 2. Data Layer
-- [ ] Buat `GoogleOAuthProvider` yang meng-implement `OAuthProvider`.
+- [x] Buat `GoogleOAuthProvider` yang meng-implement `OAuthProvider`.
   - Class ini akan memanggil `GoogleSignIn().signIn()` dan me-return `idToken`.
-- [ ] Update `AuthRemoteDataSource`: Tambahkan pemanggilan HTTP `POST /api/v1/auth/oauth` dengan `idToken`.
-- [ ] Implementasi fungsi baru tersebut di `AuthRepositoryImpl`.
+- [x] Update `AuthRemoteDataSource`: Tambahkan pemanggilan HTTP `POST /api/v1/auth/oauth` dengan `idToken`.
+- [x] Implementasi fungsi baru tersebut di `AuthRepositoryImpl`.
 
 ### 3. Presentation Layer (BLoC & UI)
 - [ ] Tambahkan event baru: `AuthOAuthLoginRequested(OAuthProvider provider)` di `AuthBloc`.

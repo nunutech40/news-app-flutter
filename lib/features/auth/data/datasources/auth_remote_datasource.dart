@@ -16,6 +16,11 @@ abstract class AuthRemoteDatasource {
     required String password,
   });
 
+  Future<AuthTokensModel> signInWithOAuth({
+    required String provider,
+    required String idToken,
+  });
+
   Future<UserModel> getProfile();
 
   Future<UserModel> updateProfile(UserModel user);
@@ -60,6 +65,23 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
     }
     throw ServerException(
       message: response['message'] as String? ?? 'Login failed',
+    );
+  }
+
+  @override
+  Future<AuthTokensModel> signInWithOAuth({
+    required String provider,
+    required String idToken,
+  }) async {
+    final response = await apiClient.request('POST', ApiConstants.oauth,
+      data: {'provider': provider, 'id_token': idToken},
+    );
+
+    if (response['success'] == true) {
+      return AuthTokensModel.fromJson(response['data'] as Map<String, dynamic>);
+    }
+    throw ServerException(
+      message: response['message'] as String? ?? 'OAuth Login failed',
     );
   }
 
