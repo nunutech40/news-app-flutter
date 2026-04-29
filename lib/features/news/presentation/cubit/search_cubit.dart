@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:news_app/core/utils/exception_mapper.dart';
 import 'package:news_app/features/news/domain/entities/article.dart';
 import 'package:news_app/features/news/domain/usecases/get_news_feed_usecase.dart';
 import 'package:equatable/equatable.dart';
@@ -85,7 +86,7 @@ class SearchCubit extends Cubit<SearchState> {
       ));
     } catch (e) {
       if (_currentQuery == query) {
-        emit(SearchError(e.toString()));
+        emit(SearchError(ExceptionMapper.toMessage(e)));
       }
     }
   }

@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:news_app/core/utils/exception_mapper.dart';
 import 'package:news_app/features/news/domain/entities/article.dart';
 import 'package:news_app/features/news/domain/usecases/get_bookmarks_usecase.dart';
 
@@ -40,7 +41,7 @@ class BookmarkCubit extends Cubit<BookmarkState> {
       final bookmarks = await _getBookmarksUseCase();
       emit(BookmarkLoaded(bookmarks));
     } catch (e) {
-      emit(BookmarkError(e.toString()));
+      emit(BookmarkError(ExceptionMapper.toMessage(e)));
     }
   }
 }

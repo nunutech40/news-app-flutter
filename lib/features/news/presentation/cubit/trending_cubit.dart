@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:news_app/core/utils/exception_mapper.dart';
 import 'package:news_app/features/news/domain/entities/article.dart';
 import 'package:news_app/features/news/domain/usecases/get_news_feed_usecase.dart';
 
@@ -43,7 +44,7 @@ class TrendingCubit extends Cubit<TrendingState> {
       if (isClosed) return;
       emit(TrendingLoaded(articles: result.feed));
     } catch (e) {
-      emit(TrendingError(e.toString()));
+      emit(TrendingError(ExceptionMapper.toMessage(e)));
     }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:news_app/core/utils/exception_mapper.dart';
 import 'package:news_app/features/news/domain/entities/category.dart';
 import 'package:news_app/features/news/domain/usecases/get_categories_usecase.dart';
 
@@ -43,7 +44,7 @@ class CategoryCubit extends Cubit<CategoryState> {
       if (isClosed) return;
       emit(CategoryLoaded(categories: cats));
     } catch (e) {
-      emit(CategoryError(e.toString()));
+      emit(CategoryError(ExceptionMapper.toMessage(e)));
     }
   }
 

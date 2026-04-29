@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:news_app/core/utils/exception_mapper.dart';
 import 'package:news_app/features/news/domain/entities/article.dart';
 import 'package:news_app/features/news/domain/usecases/get_article_usecase.dart';
 import 'package:news_app/features/news/domain/usecases/check_bookmark_status_usecase.dart';
@@ -57,7 +58,7 @@ class ArticleDetailCubit extends Cubit<ArticleDetailState> {
       final isBookmarked = await _checkBookmarkUseCase(slug);
       emit(ArticleDetailLoaded(article, isBookmarked: isBookmarked));
     } catch (e) {
-      emit(ArticleDetailError(e.toString()));
+      emit(ArticleDetailError(ExceptionMapper.toMessage(e)));
     }
   }
 
