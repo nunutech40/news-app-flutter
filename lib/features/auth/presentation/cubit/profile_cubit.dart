@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:news_app/core/constants/api_constants.dart';
 import 'package:news_app/core/error/exceptions.dart';
 import 'package:news_app/core/network/api_client.dart';
+import 'package:news_app/core/utils/exception_mapper.dart';
 import 'package:news_app/features/auth/domain/entities/user.dart';
 import 'package:news_app/features/auth/domain/usecases/update_profile_usecase.dart';
 import 'package:news_app/features/auth/presentation/cubit/profile_state.dart';
@@ -89,20 +90,10 @@ class ProfileCubit extends Cubit<ProfileState> {
         },
       );
     } catch (e) {
-      // Petakan exception ke pesan yang ramah pengguna.
-      // Jangan pernah tampilkan e.toString() mentah ke user karena akan
-      // memunculkan teks teknis seperti "DioException [connection error]: ..."
-      final String friendlyMessage;
-      if (e is NetworkException) {
-        friendlyMessage = 'Gagal terhubung ke server. Periksa koneksi internet Anda.';
-      } else if (e is ServerException) {
-        friendlyMessage = e.message; // Pesan dari server sudah cukup informatif
-      } else if (e is UnauthorizedException) {
-        friendlyMessage = 'Sesi Anda telah berakhir. Silakan login kembali.';
-      } else {
-        friendlyMessage = 'Terjadi kesalahan. Silakan coba lagi.';
-      }
-      emit(state.copyWith(status: ProfileStatus.failure, errorMessage: friendlyMessage));
+      emit(state.copyWith(
+        status: ProfileStatus.failure,
+        errorMessage: ExceptionMapper.toMessage(e),
+      ));
     }
   }
 }
