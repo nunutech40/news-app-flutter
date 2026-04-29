@@ -1008,6 +1008,95 @@ Kapanpun cukup menggunakan pemanggilan fungsi sederhana yang linier ke API atau 
 
 **Aturan Emas:** *Mulailah dengan Cubit secara default. Promosikan ia menjadi BLoC hanya apabila state logic menyertakan rute alur reaktif/event stream processing tingkat lanjut.*
 
+#### Perbandingan Alur Kerja: BLoC vs Cubit
+
+````carousel
+**BLoC — Alur Event-Driven (Contoh: AuthBloc `LoginRequested`)**
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant UI as LoginPage (UI)
+    participant BLoC as AuthBloc
+    participant UC as LoginUseCase
+    participant Repo as AuthRepository
+
+    User->>UI: Tap tombol Login
+    UI->>BLoC: add(AuthLoginRequested(email, password))
+    Note over BLoC: mapEventToState()<br/>Event masuk antrian stream
+    BLoC->>BLoC: emit(AuthLoading)
+    UI-->>User: Tampilkan loading spinner
+
+    BLoC->>UC: loginUseCase(params)
+    UC->>Repo: login(email, password)
+    Repo-->>UC: Either Right(tokens) / Left(Failure)
+    UC-->>BLoC: Either hasil
+
+    alt Sukses → Right(tokens)
+        BLoC->>BLoC: emit(AuthAuthenticated(user))
+        UI-->>User: GoRouter redirect ke /dashboard
+    else Gagal → Left(Failure)
+        BLoC->>BLoC: emit(AuthError(message))
+        UI-->>User: Tampilkan snackbar error
+    end
+```
+<!-- slide -->
+**Cubit — Alur Fungsi Langsung (Contoh: NewsFeedCubit `load()`)**
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant UI as NewsFeedPage (UI)
+    participant Cubit as NewsFeedCubit
+    participant UC as GetNewsFeedUseCase
+    participant Repo as NewsRepository
+
+    User->>UI: Buka halaman / pull-to-refresh
+    UI->>Cubit: cubit.load(category: 'tech')
+    Note over Cubit: Panggilan fungsi biasa<br/>Tidak ada Event Class
+    Cubit->>Cubit: emit(NewsFeedLoading)
+    UI-->>User: Tampilkan shimmer loading
+
+    Cubit->>UC: useCase(GetNewsFeedParams(...))
+    UC->>Repo: getNewsFeed(params)
+    Repo-->>UC: NewsFeedResult
+    UC-->>Cubit: NewsFeedResult
+
+    alt Sukses
+        Cubit->>Cubit: emit(NewsFeedLoaded(articles))
+        UI-->>User: Render daftar artikel
+    else Gagal (catch e)
+        Cubit->>Cubit: emit(NewsFeedError(ExceptionMapper.toMessage(e)))
+        UI-->>User: Tampilkan pesan error
+    end
+```
+<!-- slide -->
+**Perbedaan Struktural: BLoC vs Cubit**
+
+```mermaid
+graph LR
+    subgraph BLoC["BLoC (Event-Driven)"]
+        direction TB
+        E1["Event: LoginRequested"] --> M1["mapEventToState()"]
+        E2["Event: LogoutRequested"] --> M1
+        E3["Event: CheckRequested"] --> M1
+        M1 --> S1["State Stream"]
+    end
+
+    subgraph Cubit["Cubit (Function-Driven)"]
+        direction TB
+        F1["load()"] --> Emit1["emit(Loading)"]
+        F2["refresh()"] --> Emit1
+        Emit1 --> S2["State Stream"]
+    end
+
+    UI1["UI"] -->|"add(Event)"| BLoC
+    UI2["UI"] -->|"cubit.load()"| Cubit
+    BLoC -->|"BlocBuilder"| UI1
+    Cubit -->|"BlocBuilder"| UI2
+```
+````
+
 ### 9.4 BLoC Skala Global (Di Root/MaterialApp)
 
 Berbeda dengan Cubit abstrak/fungsional lain (seperti `NewsFeedCubit` atau `CategoryCubit`) yang umurnya dibatasi dan hanya diinisialisasi ("di-provide") di layar/rute tempat meraka dipanggil, dalam aplikasi ini terdapat **dua BLoC yang sengaja ditarik secara eksplisit hingga ke level akar absolut (root) pada `MaterialApp`**: yaitu **`AuthBloc`** dan **`GlobalAlertBloc`**.
@@ -1029,6 +1118,74 @@ MultiBlocProvider(
   child: MaterialApp.router(...)
 )
 ```
+
+#### Visualisasi: Mengapa Harus di Root?
+
+````carousel
+**AuthBloc di Root — Auth-Guard Otomatis**
+
+```mermaid
+sequenceDiagram
+    participant Router as GoRouter (Root)
+    participant Auth as AuthBloc (Root)
+    participant BG as Background Process
+    participant UI as ArticleDetailPage (nested)
+
+    Note over Router,Auth: Keduanya hidup di Root MaterialApp
+
+    UI-->>UI: User sedang baca artikel (layar nested)
+    BG->>Auth: Token expired → AuthInterceptor trigger
+    Auth->>Auth: emit(AuthUnauthenticated)
+
+    Auth-->>Router: Stream berubah → refreshListenable notify
+    Router->>Router: redirect() dipanggil
+    Note over Router: Deteksi: status == unauthenticated
+    Router->>UI: PAKSA navigate ke /login
+    Note over UI: Seluruh stack layar dimusnahkan<br/>User mendarat di /login
+```
+<!-- slide -->
+**❌ Skenario TANPA Root — Yang Gagal**
+
+```mermaid
+sequenceDiagram
+    participant Router as GoRouter (Root)
+    participant Auth as AuthBloc (hanya di /dashboard)
+    participant BG as Background Process
+    participant UI as ArticleDetailPage (nested)
+
+    Note over Auth: AuthBloc hanya ada di scope /dashboard
+    Note over UI: ArticleDetailPage di-push di ATAS /dashboard
+
+    UI-->>UI: User sedang baca artikel
+    BG->>Auth: Token expired
+    Auth->>Auth: emit(AuthUnauthenticated)
+
+    Note over Router: GoRouter tidak bisa dengar AuthBloc<br/>karena AuthBloc di luar scope Router!
+    Router->>Router: ❌ Tidak ada redirect
+    UI-->>UI: ❌ Blank / Freeze
+    Note over UI: User terjebak di layar rusak
+```
+<!-- slide -->
+**GlobalAlertBloc di Root — Error Universal**
+
+```mermaid
+sequenceDiagram
+    participant API as ApiClient (Core)
+    participant Alert as GlobalAlertBloc (Root)
+    participant UI as Layar Manapun (Child)
+    participant SB as SnackBar Global
+
+    Note over API,Alert: ApiClient punya referensi ke GlobalAlertBloc
+
+    API->>API: Request gagal (connectionError)
+    API->>Alert: add(ShowNetworkFailure(isTimeout: false))
+    Alert->>Alert: emit(GlobalAlertNetworkError)
+
+    Alert-->>SB: BlocListener di Root MaterialApp react
+    SB-->>UI: SnackBar muncul di ATAS layar apapun
+    Note over UI: User di layar Search, Bookmark,<br/>Detail — SnackBar tetap muncul!
+```
+````
 
 ### 9.5 Auth State Machine
 
