@@ -251,6 +251,64 @@ graph TB
 | Learning curve | Dokumentasi TRD ini + template per layer |
 | Over-engineering untuk app kecil | Justified karena app akan scale dengan news features, user management, dll |
 
+### 4.4 Lapisan Infrastruktur (External Dependencies)
+
+Dalam Clean Architecture, semua hal yang **berada di luar kendali kode Dart murni** disebut **Infrastructure** atau **External Dependencies**. Ini adalah "dunia luar" yang dipisahkan secara tegas dari logika bisnis.
+
+#### Dua Jenis "Dunia Luar":
+
+| Kategori | Contoh | Kenapa Disebut "Luar"? |
+|----------|--------|------------------------|
+| **OS / Hardware** | Notifikasi, Kamera, GPS, File System, Biometric | Dikontrol langsung oleh Android/iOS, bukan oleh kode Flutter |
+| **Network / Third Party** | REST API (Dio), Firebase, Analytics SDK | Berada di server cloud, di luar batas HP pengguna |
+
+#### Prinsip Inti — "Siapa yang Mengonsumsi, Menentukan Cara Membungkusnya":
+
+Ini adalah aturan paling penting dalam menentukan pola pembungkusan *External Dependency*:
+
+```
+Siapa yang memakai?          Dibungkus menjadi apa?
+─────────────────────────    ─────────────────────────────
+RepositoryImpl (Data Layer)  → Datasource  (Detail implementasi)
+UseCase (Domain Layer)       → Repository  (Domain Contract / Interface)
+```
+
+**Visualisasi Tembok Perbatasan:**
+
+```
+╔══════════════════════════════════════╗
+║        DOMAIN (Pure Dart)            ║
+║   UseCase ──→ Repository Interface   ║  ← Tembok perbatasan
+╚══════════════════════════════════════╝
+                    │
+                    ▼
+╔══════════════════════════════════════╗
+║          DATA LAYER                  ║
+║   RepositoryImpl                     ║
+║     ├── RemoteDatasource (Dio/API)   ║  ← Jembatan ke dunia luar
+║     └── LocalDatasource (Hive/DB)   ║  ← Jembatan ke dunia luar
+╚══════════════════════════════════════╝
+                    │
+                    ▼
+╔══════════════════════════════════════╗
+║   INFRASTRUKTUR / DUNIA LUAR         ║
+║   OS (Notif, GPS, Camera)            ║
+║   Network (Server, Firebase)         ║
+╚══════════════════════════════════════╝
+```
+
+**Contoh nyata dalam proyek ini:**
+
+| External Dependency | Dipakai Oleh | Pola Pembungkus | Alasan |
+|---------------------|--------------|-----------------|--------|
+| `flutter_local_notifications` | `UpdateProfileUseCase` (Domain) | `NotificationRepository` (interface) | UseCase butuh kontrak langsung ke Domain |
+| `FlutterSecureStorage` | `AuthRepositoryImpl` (Data) | `AuthLocalDatasource` | Repository sudah jadi kontraknya untuk UseCase |
+| `Dio` (HTTP Client) | `AuthRepositoryImpl` (Data) | `AuthRemoteDatasource` | Repository sudah jadi kontraknya untuk UseCase |
+| `SharedPreferences` | `AuthRepositoryImpl` (Data) | `AuthLocalDatasource` | Repository sudah jadi kontraknya untuk UseCase |
+
+> [!IMPORTANT]
+> **Domain Layer tidak pernah boleh tahu bahwa infrastruktur itu ada.** `UpdateProfileUseCase` tidak mengenal `FlutterLocalNotificationsPlugin`. Ia hanya mengenal `NotificationRepository` — sebuah antarmuka murni Dart. Ketika *library*-nya diganti atau diperbaharui, **tidak ada satu baris kode domain yang perlu diubah**.
+
 ---
 
 ## 5. Project Structure
@@ -518,6 +576,64 @@ Cross-cutting concerns yang digunakan oleh semua feature:
 | `NotificationRepositoryImpl` | Implementasi `flutter_local_notifications` plugin, Android Channel config, iOS Darwin config |
 | `AppRouter` | Auth-aware routing |
 | `AppTheme` | Design system tokens |
+
+### 6.5 Aturan Pembungkusan External Dependency
+
+Proyek ini mengikuti satu aturan konsisten untuk menentukan **bagaimana cara membungkus** semua *library* atau *plugin* eksternal:
+
+> **"Layer yang mengonsumsi, menentukan cara membungkusnya."**
+
+#### Kapan Menjadi Datasource?
+
+Jika sebuah *library* eksternal dipakai oleh **`RepositoryImpl` (Data Layer)**, maka cukup dibungkus sebagai **`Datasource`**. Ini karena `Repository` sudah berperan sebagai kontrak untuk `UseCase`.
+
+```dart
+// UseCase hanya tahu AuthRepository (domain contract)
+class LoginUseCase {
+  final AuthRepository repository; // ← UseCase tidak tahu Hive/SecureStorage ada
+}
+
+// AuthRepositoryImpl yang "kotor" — boleh tahu Datasource
+class AuthRepositoryImpl implements AuthRepository {
+  final AuthLocalDatasource localDatasource; // ← Hive/SecureStorage dibungkus di sini
+  final AuthRemoteDatasource remoteDatasource; // ← Dio/API dibungkus di sini
+}
+```
+
+#### Kapan Menjadi Repository (Interface Domain)?
+
+Jika sebuah *library* eksternal dipakai langsung oleh **`UseCase` (Domain Layer)**, maka **wajib** dibungkus sebagai **`Repository` interface** agar Domain tidak bergantung pada infrastruktur.
+
+```dart
+// UseCase ini butuh dua alat sekaligus → dua Repository
+class UpdateProfileUseCase {
+  final AuthRepository repository;               // ← Untuk save data ke API
+  final NotificationRepository notifRepository;  // ← Untuk trigger notifikasi OS
+  // UseCase tidak tahu FlutterLocalNotificationsPlugin ada!
+}
+
+// Implementasinya (Data Layer) yang "kotor" — boleh tahu plugin
+class NotificationRepositoryImpl implements NotificationRepository {
+  final FlutterLocalNotificationsPlugin _plugin = ...; // ← Detail infrastruktur
+}
+```
+
+#### Decision Tree:
+
+```
+Ada external library/plugin yang mau dipakai?
+            │
+            ▼
+  Siapa yang butuh pakainya?
+       │              │
+       ▼              ▼
+  RepositoryImpl   UseCase
+  (Data Layer)     (Domain Layer)
+       │              │
+       ▼              ▼
+  Datasource      Repository Interface
+  (cukup)         (wajib buat kontrak)
+```
 
 ---
 
