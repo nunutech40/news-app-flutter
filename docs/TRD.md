@@ -1010,8 +1010,7 @@ Kapanpun cukup menggunakan pemanggilan fungsi sederhana yang linier ke API atau 
 
 #### Perbandingan Alur Kerja: BLoC vs Cubit
 
-````carousel
-**BLoC — Alur Event-Driven (Contoh: AuthBloc `LoginRequested`)**
+#### Diagram 1 — BLoC: Alur Event-Driven (AuthBloc `LoginRequested`)
 
 ```mermaid
 sequenceDiagram
@@ -1032,16 +1031,16 @@ sequenceDiagram
     Repo-->>UC: Either Right(tokens) / Left(Failure)
     UC-->>BLoC: Either hasil
 
-    alt Sukses → Right(tokens)
+    alt Sukses: Right(tokens)
         BLoC->>BLoC: emit(AuthAuthenticated(user))
         UI-->>User: GoRouter redirect ke /dashboard
-    else Gagal → Left(Failure)
+    else Gagal: Left(Failure)
         BLoC->>BLoC: emit(AuthError(message))
         UI-->>User: Tampilkan snackbar error
     end
 ```
-<!-- slide -->
-**Cubit — Alur Fungsi Langsung (Contoh: NewsFeedCubit `load()`)**
+
+#### Diagram 2 — Cubit: Alur Fungsi Langsung (NewsFeedCubit `load()`)
 
 ```mermaid
 sequenceDiagram
@@ -1065,17 +1064,17 @@ sequenceDiagram
     alt Sukses
         Cubit->>Cubit: emit(NewsFeedLoaded(articles))
         UI-->>User: Render daftar artikel
-    else Gagal (catch e)
-        Cubit->>Cubit: emit(NewsFeedError(ExceptionMapper.toMessage(e)))
+    else Gagal
+        Cubit->>Cubit: emit(NewsFeedError(message))
         UI-->>User: Tampilkan pesan error
     end
 ```
-<!-- slide -->
-**Perbedaan Struktural: BLoC vs Cubit**
+
+#### Diagram 3 — Perbedaan Struktural: BLoC vs Cubit
 
 ```mermaid
 graph LR
-    subgraph BLoC["BLoC (Event-Driven)"]
+    subgraph BLOC["BLoC (Event-Driven)"]
         direction TB
         E1["Event: LoginRequested"] --> M1["mapEventToState()"]
         E2["Event: LogoutRequested"] --> M1
@@ -1083,19 +1082,18 @@ graph LR
         M1 --> S1["State Stream"]
     end
 
-    subgraph Cubit["Cubit (Function-Driven)"]
+    subgraph CUBIT["Cubit (Function-Driven)"]
         direction TB
         F1["load()"] --> Emit1["emit(Loading)"]
         F2["refresh()"] --> Emit1
         Emit1 --> S2["State Stream"]
     end
 
-    UI1["UI"] -->|"add(Event)"| BLoC
-    UI2["UI"] -->|"cubit.load()"| Cubit
-    BLoC -->|"BlocBuilder"| UI1
-    Cubit -->|"BlocBuilder"| UI2
+    UI1["UI"] -->|"add(Event)"| BLOC
+    UI2["UI"] -->|"cubit.load()"| CUBIT
+    BLOC -->|"BlocBuilder"| UI1
+    CUBIT -->|"BlocBuilder"| UI2
 ```
-````
 
 ### 9.4 BLoC Skala Global (Di Root/MaterialApp)
 
@@ -1121,8 +1119,7 @@ MultiBlocProvider(
 
 #### Visualisasi: Mengapa Harus di Root?
 
-````carousel
-**AuthBloc di Root — Auth-Guard Otomatis**
+#### Diagram 4 — AuthBloc di Root: Auth-Guard Otomatis
 
 ```mermaid
 sequenceDiagram
@@ -1134,22 +1131,22 @@ sequenceDiagram
     Note over Router,Auth: Keduanya hidup di Root MaterialApp
 
     UI-->>UI: User sedang baca artikel (layar nested)
-    BG->>Auth: Token expired → AuthInterceptor trigger
+    BG->>Auth: Token expired, AuthInterceptor trigger
     Auth->>Auth: emit(AuthUnauthenticated)
 
-    Auth-->>Router: Stream berubah → refreshListenable notify
+    Auth-->>Router: Stream berubah, refreshListenable notify
     Router->>Router: redirect() dipanggil
     Note over Router: Deteksi: status == unauthenticated
     Router->>UI: PAKSA navigate ke /login
     Note over UI: Seluruh stack layar dimusnahkan<br/>User mendarat di /login
 ```
-<!-- slide -->
-**❌ Skenario TANPA Root — Yang Gagal**
+
+#### Diagram 5 — Skenario TANPA Root: Yang Gagal
 
 ```mermaid
 sequenceDiagram
     participant Router as GoRouter (Root)
-    participant Auth as AuthBloc (hanya di /dashboard)
+    participant Auth as AuthBloc (hanya di dashboard)
     participant BG as Background Process
     participant UI as ArticleDetailPage (nested)
 
@@ -1160,13 +1157,13 @@ sequenceDiagram
     BG->>Auth: Token expired
     Auth->>Auth: emit(AuthUnauthenticated)
 
-    Note over Router: GoRouter tidak bisa dengar AuthBloc<br/>karena AuthBloc di luar scope Router!
-    Router->>Router: ❌ Tidak ada redirect
-    UI-->>UI: ❌ Blank / Freeze
+    Note over Router: GoRouter tidak bisa dengar AuthBloc<br/>karena AuthBloc di luar scope Router
+    Router->>Router: Tidak ada redirect
+    UI-->>UI: Blank atau Freeze
     Note over UI: User terjebak di layar rusak
 ```
-<!-- slide -->
-**GlobalAlertBloc di Root — Error Universal**
+
+#### Diagram 6 — GlobalAlertBloc di Root: Error Universal
 
 ```mermaid
 sequenceDiagram
@@ -1183,9 +1180,8 @@ sequenceDiagram
 
     Alert-->>SB: BlocListener di Root MaterialApp react
     SB-->>UI: SnackBar muncul di ATAS layar apapun
-    Note over UI: User di layar Search, Bookmark,<br/>Detail — SnackBar tetap muncul!
+    Note over UI: User di layar Search, Bookmark, Detail<br/>SnackBar tetap muncul
 ```
-````
 
 ### 9.5 Auth State Machine
 
