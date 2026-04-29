@@ -15,8 +15,8 @@ Dokumen ini memuat rencana eksekusi *end-to-end* untuk mengimplementasikan fitur
 - [ ] Jalankan migrasi di VPS/Database *live*.
 
 ### 2. Update Model & Repository
-- [ ] Update `models.User` struct (Go) untuk menerima `GoogleID` dan `AuthProvider`.
-- [ ] Update `UserRepository`:
+- [x] Update `models.User` struct (Go) untuk menerima `GoogleID` dan `AuthProvider`.
+- [x] Update `UserRepository`:
   - Tambah fungsi `FindByGoogleID(googleID string) (*models.User, error)`.
   - Modifikasi `CreateUser` agar bisa menerima `Password` yang kosong (NULL) jika `AuthProvider` = `google`.
   - Tambah fungsi `LinkGoogleID(userID int64, googleID string) error`.
