@@ -44,7 +44,17 @@ echo "✅ Pods, Podfile.lock, dan xcworkspace dihapus."
 echo ""
 
 # [4/6] Hapus DerivedData Xcode yang korup
-echo "🗄️  [4/6] Hapus DerivedData Xcode yang korup..."
+# PENTING: Xcode harus ditutup dulu agar tidak mengunci file DerivedData.
+# Script ini akan menutup Xcode otomatis, membersihkan DerivedData, lalu membukanya kembali.
+echo "🗄️  [4/6] Menutup Xcode & hapus DerivedData yang korup..."
+if pgrep -x "Xcode" > /dev/null; then
+  echo "   → Xcode sedang berjalan, menutup otomatis..."
+  killall Xcode 2>/dev/null || true
+  sleep 2  # Tunggu Xcode benar-benar tertutup
+  echo "   → Xcode ditutup."
+else
+  echo "   → Xcode tidak berjalan, lanjut langsung."
+fi
 rm -rf ~/Library/Developer/Xcode/DerivedData/ModuleCache.noindex
 rm -rf ~/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex
 # Hapus DerivedData spesifik project ini
@@ -61,12 +71,14 @@ cd ..
 echo "✅ Pod install selesai."
 echo ""
 
-# [6/6] Selesai
+# [6/6] Selesai — Buka Xcode otomatis
 echo "============================================================"
-echo "🚀 [6/6] Reset selesai! Langkah selanjutnya:"
+echo "🚀 [6/6] Reset selesai!"
 echo ""
-echo "   1. Buka Xcode via:   open ios/Runner.xcworkspace"
-echo "   2. Atau langsung run: fvm flutter run"
-echo "   3. Jika masih error:  fvm flutter run -v (verbose untuk debug)"
+echo "   Membuka Runner.xcworkspace di Xcode..."
+open ios/Runner.xcworkspace
+echo ""
+echo "   Setelah Xcode terbuka, pilih device dan tekan ▶ Run."
+echo "   Atau jalankan: fvm flutter run"
 echo "============================================================"
 echo ""
