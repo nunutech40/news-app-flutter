@@ -32,8 +32,8 @@ Dokumen ini memuat rencana eksekusi *end-to-end* untuk mengimplementasikan fitur
   5. Jika tidak ketemu sama sekali → `CreateUser` (tanpa password) → Login.
 
 ### 4. Controller & Router
-- [ ] Buat *handler* baru di `AuthController`: `OAuthLogin(c *gin.Context)`.
-- [ ] Daftarkan *endpoint* baru di router: `POST /api/v1/auth/oauth`.
+- [x] Buat *handler* baru di `AuthController`: `OAuthLogin(c *gin.Context)`.
+- [x] Daftarkan *endpoint* baru di router: `POST /api/v1/auth/oauth`.
 - [ ] Lakukan tes API menggunakan Postman/cURL dengan *dummy* atau *valid idToken*.
 
 ---
