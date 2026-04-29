@@ -9,7 +9,7 @@
 | **Version** | 1.0.0 |
 | **Author** | Nunu Nugraha |
 | **Created** | 2026-04-01 |
-| **Last Updated** | 2026-04-06 |
+| **Last Updated** | 2026-04-29 |
 | **Status** | In Development |
 
 ---
@@ -169,12 +169,22 @@ Presentation -> Domain <- Data
 |---------|---------|---------------|
 | **google_fonts** | ^6.2.1 | Akses ke 1000+ Google Fonts tanpa bundling manual. Runtime font loading. |
 | **cupertino_icons** | ^1.0.8 | iOS-style icons untuk platform-consistent UI. |
+| **shimmer** | ^3.0.0 | Efek loading skeleton (placeholder animasi) saat data belum tersedia. |
+| **cached_network_image** | ^3.4.1 | Cache gambar dari network secara otomatis dengan placeholder dan error widget. |
+| **image_picker** | ^1.1.2 | Memilih gambar dari galeri atau kamera untuk upload avatar profil. |
+| **image** | ^4.3.0 | Pemrosesan gambar (resize, compress) sebelum upload ke server, dijalankan di Isolate terpisah. |
+
+#### Local Notifications
+
+| Library | Version | Justification |
+|---------|---------|---------------|
+| **flutter_local_notifications** | ^21.0.0 | Plugin untuk memunculkan notifikasi Heads-Up lokal di Android (dengan channel) dan iOS. Dikelola melalui `NotificationRepository` di Core Layer untuk memenuhi prinsip Clean Architecture. |
 
 #### Testing
 
 | Library | Version | Justification |
 |---------|---------|---------------|
-| **bloc_test** | ^3.3.0 | Standar emas untuk menguji state transitions pada BLoC dengan format `build`, `act`, `expect`. |
+| **bloc_test** | ^10.0.0 | Standar emas untuk menguji state transitions pada BLoC dengan format `build`, `act`, `expect`. |
 | **mocktail** | ^1.0.4 | Null-safety friendly mocking library (alternatif modern untuk mockito). |
 | **http_mock_adapter** | ^0.6.1 | Untuk simulasi (mocking) respons HTTP dari Dio tanpa butuh koneksi internet. |
 
@@ -256,6 +266,12 @@ lib/
 |   |       +-- global_alert_bloc.dart           # Global network error alert BLoC
 |   |-- constants/
 |   |   +-- api_constants.dart                   # Base URL, endpoints, storage keys
+|   |-- data/
+|   |   +-- repositories/
+|   |       +-- notification_repository_impl.dart # Impl: flutter_local_notifications plugin
+|   |-- domain/
+|   |   +-- repositories/
+|   |       +-- notification_repository.dart     # Kontrak global notifikasi (initialize, show)
 |   |-- error/
 |   |   |-- exceptions.dart                      # ServerException, CacheException, dll
 |   |   +-- failures.dart                        # ServerFailure, UnauthorizedFailure, dll
@@ -498,6 +514,8 @@ Cross-cutting concerns yang digunakan oleh semua feature:
 | `ApiClient` | Wrap Dio, centralized error handling |
 | `AuthInterceptor` | Token injection, auto refresh with race condition prevention |
 | `TokenProvider` | Interface agar `ApiClient` tidak depend ke auth feature |
+| `NotificationRepository` | Kontrak global untuk local notifications (initialize + show) — dipakai oleh UseCase |
+| `NotificationRepositoryImpl` | Implementasi `flutter_local_notifications` plugin, Android Channel config, iOS Darwin config |
 | `AppRouter` | Auth-aware routing |
 | `AppTheme` | Design system tokens |
 
@@ -1353,14 +1371,15 @@ Pengembang diwajibkan untuk memahami kapan menggunakan metode navigasi yang tepa
 Order matters karena dependency chain:
 
 ```
-1. External       -> FlutterSecureStorage, SharedPreferences
-2. Local DS       -> AuthLocalDatasource (needs SecureStorage + SharedPrefs)
-3. TokenProvider  -> Points to AuthLocalDatasource instance
-4. ApiClient      -> Needs TokenProvider
-5. Remote DS      -> Needs ApiClient
-6. Repository     -> Needs Remote DS + Local DS
-7. Use Cases      -> Needs Repository
-8. BLoC           -> Needs Use Cases + Repository
+1. External              -> FlutterSecureStorage, SharedPreferences
+2. Local DS              -> AuthLocalDatasource (needs SecureStorage + SharedPrefs)
+3. TokenProvider         -> Points to AuthLocalDatasource instance
+4. ApiClient             -> Needs TokenProvider
+5. Remote DS             -> Needs ApiClient
+6. Repository (Feature)  -> Needs Remote DS + Local DS
+7. Repository (Core)     -> NotificationRepository (LazySingleton, no deps)
+8. Use Cases             -> Needs Repository (+ NotificationRepository jika perlu notif)
+9. BLoC                  -> Needs Use Cases + Repository
 ```
 
 ### 14.2 Registration Strategy
@@ -1394,6 +1413,7 @@ graph TD
     AuthRepo --> ProfileUC["GetProfileUseCase"]
     AuthRepo --> UpdateUC["UpdateProfileUseCase"]
     AuthRepo --> LogoutUC["LogoutUseCase"]
+    NotifRepo["NotificationRepository (Core)"] --> UpdateUC
     LoginUC --> AuthBloc["AuthBloc"]
     RegisterUC --> AuthBloc
     ProfileUC --> AuthBloc
@@ -1677,6 +1697,7 @@ Dokumen induk (TRD) ini bertindak sebagai Blueprint Global Arsitektur & Aturan M
 | Feature Name | Document Resource | Description | Status |
 |--------------|-------------------|-------------|--------|
 | **Auth** | [features/auth.md](features/auth.md) | Otentikasi, Splash Screen, Storage Token | ✅ Done |
+| **Update Profile** | [features/update_profile.md](features/update_profile.md) | Edit profil, upload avatar, local notification trigger via UseCase | ✅ Done |
 | **News & Explore** | [features/news_explore.md](features/news_explore.md) | News Feed, Explore Page, API Feed aggregator | ✅ Done |
 | **Bookmarks** | [features/bookmarks.md](features/bookmarks.md) | Layar Bookmark, Optimistic updating | ✅ Done |
 | **Search** | [features/search.md](features/search.md) | Pencarian dengan Pagination & Debounce | ✅ Done |
