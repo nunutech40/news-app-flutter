@@ -43,7 +43,7 @@ Status "Login" seorang pengguna memengaruhi hampir seluruh bagian aplikasi (buka
 | **HTTP Client** | `dio` | ^5.7.0 | Mengirimkan request `POST /login`, `POST /register`, `GET /profile`, dan `POST /refresh-token`. |
 | **Auth Interceptor** | `dio` → `Interceptor` | ^5.7.0 | Menyuntikkan header `Authorization: Bearer <token>` secara otomatis di setiap request, dan menangani `401 Unauthorized` dengan mekanisme silent refresh token. |
 | **Functional Error Handling** | `dartz` | ^0.10.1 | `Either<Failure, T>` digunakan di seluruh layer Repository untuk merepresentasikan hasil sukses atau gagal tanpa menggunakan `try-catch` di UI. |
-| **Google Sign-In** *(Planned)* | `google_sign_in` | ^6.x.x | Menghasilkan `idToken` dari akun Google via native OS popup. `idToken` dikirim ke backend untuk ditukar dengan JWT aplikasi. |
+| **Social Login (Google)** | `google_sign_in` | ^7.2.0 | Menjalankan SDK Native Google (Android/iOS) untuk memunculkan Account Picker dan mengambil `idToken` secara aman. |
 
 ---
 
