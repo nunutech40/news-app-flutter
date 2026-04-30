@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:dartz/dartz.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:news_app/core/error/failures.dart';
+import 'package:news_app/core/utils/exception_mapper.dart';
 import 'package:news_app/features/auth/domain/services/firebase_otp_service.dart';
 
 class FirebaseOTPServiceImpl implements FirebaseOTPService {
@@ -24,7 +25,15 @@ class FirebaseOTPServiceImpl implements FirebaseOTPService {
         },
         verificationFailed: (FirebaseAuthException e) {
           if (!completer.isCompleted) {
-            completer.complete(Left(ServerFailure(message: e.message ?? 'Phone verification failed')));
+            String safeMessage = 'Verifikasi nomor telepon gagal.';
+            if (e.code == 'invalid-phone-number') {
+              safeMessage = 'Format nomor telepon tidak valid.';
+            } else if (e.code == 'too-many-requests') {
+              safeMessage = 'Terlalu banyak percobaan. Silakan coba lagi nanti.';
+            } else {
+              safeMessage = ExceptionMapper.sanitizeMessage(e.message ?? safeMessage);
+            }
+            completer.complete(Left(ServerFailure(message: safeMessage)));
           }
         },
         codeSent: (String verificationId, int? resendToken) {
@@ -39,7 +48,7 @@ class FirebaseOTPServiceImpl implements FirebaseOTPService {
 
       return await completer.future;
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: ExceptionMapper.sanitizeMessage(e.toString())));
     }
   }
 
@@ -64,9 +73,15 @@ class FirebaseOTPServiceImpl implements FirebaseOTPService {
         return const Left(ServerFailure(message: 'Failed to retrieve Firebase ID Token'));
       }
     } on FirebaseAuthException catch (e) {
-      return Left(ServerFailure(message: e.message ?? 'Invalid OTP code'));
+      String safeMessage = 'Kode OTP tidak valid atau kadaluarsa.';
+      if (e.code == 'invalid-verification-code') {
+        safeMessage = 'Kode OTP salah. Silakan periksa kembali.';
+      } else {
+        safeMessage = ExceptionMapper.sanitizeMessage(e.message ?? safeMessage);
+      }
+      return Left(ServerFailure(message: safeMessage));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: ExceptionMapper.sanitizeMessage(e.toString())));
     }
   }
 }
