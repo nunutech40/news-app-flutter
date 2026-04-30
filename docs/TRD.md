@@ -181,6 +181,7 @@ Presentation -> Domain <- Data
 | **cached_network_image** | ^3.4.1 | Cache gambar dari network secara otomatis dengan placeholder dan error widget. |
 | **image_picker** | ^1.1.2 | Memilih gambar dari galeri atau kamera untuk upload avatar profil. |
 | **image** | ^4.3.0 | Pemrosesan gambar (resize, compress) sebelum upload ke server, dijalankan di Isolate terpisah. |
+| **pinput** | ^5.0.0 | Komponen UI input OTP profesional yang mensupport *obscuring* karakter (hide PIN), autofill SMS, dan transisi fokus per-kotak (digit). |
 
 #### Local Notifications
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pinput/pinput.dart';
 import 'package:news_app/core/theme/app_theme.dart';
 import 'package:news_app/features/auth/presentation/cubit/forgot_password_cubit.dart';
 import 'package:news_app/injection_container.dart';
@@ -101,27 +102,53 @@ class _ForgotPasswordVerifyPageState extends State<ForgotPasswordVerifyPage> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 40),
-                      TextFormField(
+                      Pinput(
                         controller: _otpController,
-                        keyboardType: TextInputType.number,
-                        maxLength: 6,
+                        length: 6,
                         enabled: !isLoading,
-                        style: const TextStyle(
-                          color: AppTheme.textPrimary,
-                          letterSpacing: 8.0,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                        decoration: InputDecoration(
-                          labelText: 'Kode OTP',
-                          counterText: '', // Sembunyikan counter 0/6
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                        obscureText: true,
+                        obscuringCharacter: '•',
+                        keyboardType: TextInputType.number,
+                        defaultPinTheme: PinTheme(
+                          width: 56,
+                          height: 56,
+                          textStyle: const TextStyle(
+                            fontSize: 22,
+                            color: AppTheme.textPrimary,
+                            fontWeight: FontWeight.bold,
                           ),
-                          enabledBorder: OutlineInputBorder(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppTheme.surfaceElevated),
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppTheme.surfaceElevated),
+                            color: AppTheme.backgroundDark,
+                          ),
+                        ),
+                        focusedPinTheme: PinTheme(
+                          width: 56,
+                          height: 56,
+                          textStyle: const TextStyle(
+                            fontSize: 22,
+                            color: AppTheme.textPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppTheme.primaryColor, width: 2),
+                            borderRadius: BorderRadius.circular(12),
+                            color: AppTheme.backgroundDark,
+                          ),
+                        ),
+                        errorPinTheme: PinTheme(
+                          width: 56,
+                          height: 56,
+                          textStyle: const TextStyle(
+                            fontSize: 22,
+                            color: AppTheme.textPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppTheme.error),
+                            borderRadius: BorderRadius.circular(12),
+                            color: AppTheme.backgroundDark,
                           ),
                         ),
                         validator: (value) {
