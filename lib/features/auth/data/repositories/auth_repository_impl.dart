@@ -83,58 +83,41 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Either<Failure, User>> getProfile() async {
-    try {
-      final user = await remoteDatasource.getProfile();
+    return RepositoryHelper.execute(() async {
+      try {
+        final user = await remoteDatasource.getProfile();
 
-      // Cache profile locally
-      // Cache profile locally
-      await localDatasource.cacheProfile(
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        avatarUrl: user.avatarUrl,
-        bio: user.bio,
-        phone: user.phone,
-        preferences: user.preferences,
-      );
+        // Cache profile locally
+        await localDatasource.cacheProfile(
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          avatarUrl: user.avatarUrl,
+          bio: user.bio,
+          phone: user.phone,
+          preferences: user.preferences,
+        );
 
-      return Right(user);
-    } on ServerException catch (e) {
-      // Try cached profile as fallback
-      final cached = await localDatasource.getCachedProfile();
-      if (cached != null) {
-        return Right(User(
-          id: cached['id'] as int,
-          name: cached['name'] as String,
-          email: cached['email'] as String,
-          avatarUrl: cached['avatarUrl'] as String? ?? '',
-          bio: cached['bio'] as String? ?? '',
-          phone: cached['phone'] as String? ?? '',
-          preferences: cached['preferences'] as String? ?? '',
-        ));
+        return user;
+      } catch (e) {
+        // Jika server gagal, coba ambil dari cache lokal
+        final cached = await localDatasource.getCachedProfile();
+        if (cached != null) {
+          return User(
+            id: cached['id'] as int,
+            name: cached['name'] as String,
+            email: cached['email'] as String,
+            avatarUrl: cached['avatarUrl'] as String? ?? '',
+            bio: cached['bio'] as String? ?? '',
+            phone: cached['phone'] as String? ?? '',
+            preferences: cached['preferences'] as String? ?? '',
+          );
+        }
+        
+        // Jika cache juga kosong, lempar ulang error aslinya agar ditangkap RepositoryHelper
+        rethrow;
       }
-      return Left(ServerFailure(
-        message: ExceptionMapper.toMessage(e),
-        statusCode: e.statusCode,
-      ));
-    } on NetworkException catch (e) {
-      // Try cached profile as fallback
-      final cached = await localDatasource.getCachedProfile();
-      if (cached != null) {
-        return Right(User(
-          id: cached['id'] as int,
-          name: cached['name'] as String,
-          email: cached['email'] as String,
-          avatarUrl: cached['avatarUrl'] as String? ?? '',
-          bio: cached['bio'] as String? ?? '',
-          phone: cached['phone'] as String? ?? '',
-          preferences: cached['preferences'] as String? ?? '',
-        ));
-      }
-      return Left(NetworkFailure(message: ExceptionMapper.toMessage(e)));
-    } catch (e) {
-      return Left(ServerFailure(message: ExceptionMapper.toMessage(e)));
-    }
+    });
   }
 
   @override
