@@ -46,7 +46,7 @@ News App adalah aplikasi mobile berbasis Flutter yang mengkonsumsi REST API untu
 
 | Module | Features | Priority | Status |
 |--------|----------|----------|--------|
-| **Auth** | Register, Login (Regular & Google OAuth), Profile Update (Avatar/Bio/Phone), Logout, Token Refresh | P0 - Core | ✅ Done |
+| **Auth** | Register, Login (Regular & Google OAuth), Forgot Password (Firebase OTP), Profile Update (Avatar/Bio/Phone), Logout, Token Refresh | P0 - Core | 🔄 In Progress |
 | **Dashboard** | Shell BottomNavigationBar (5 tabs: Berita, Jelajah, Cari, Simpan, Profil) | P0 - Core | ✅ Done |
 | **News Feed** | Browse artikel, filter kategori, trending, refresh | P0 - Core | ✅ Done |
 | **Explore** | Browse artikel per kategori dengan pagination | P1 - Core | ✅ Done |
@@ -156,6 +156,8 @@ Presentation -> Domain <- Data
 | Library | Version | Justification | Alternatif yang Dipertimbangkan |
 |---------|---------|---------------|-------------------------------|
 | **google_sign_in** | ^6.2.1 | Official plugin untuk integrasi Google OAuth. Mengamankan alur login sosial langsung dengan native credential manager Android/iOS. | Manual OAuth WebView — rentan keamanan dan pengalaman pengguna kurang mulus. |
+| **firebase_auth** | ^5.3.4 | Untuk otentikasi Firebase, utamanya verifikasi OTP nomor telepon pada fitur Lupa Password. Mengambil beban validasi SMS dari backend. | Membuat infrastruktur SMS Gateway sendiri (Twilio, dll) — terlalu mahal dan butuh manajemen bot spam yang rumit. |
+| **firebase_core** | ^3.8.1 | Library wajib untuk menginisialisasi layanan Firebase (termasuk Auth) di Flutter. | Tidak ada. |
 
 #### Functional Programming
 
@@ -724,6 +726,24 @@ Success Response (200):
         "access_token": "eyJhbG...",
         "refresh_token": "eyJhbG..."
     }
+}
+```
+
+#### Forgot Password (OTP)
+
+```
+POST /api/v1/auth/password/forgot
+
+Request Body:
+{
+    "firebase_id_token": "eyJhbG...",
+    "new_password": "newSecurePassword123"
+}
+
+Success Response (200):
+{
+    "success": true,
+    "message": "Password changed successfully"
 }
 ```
 

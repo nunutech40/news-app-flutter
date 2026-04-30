@@ -359,3 +359,56 @@ sequenceDiagram
     Bloc->>UI: emit(AuthStatus.authenticated, user)
     UI-->>User: Navigates to Dashboard
 ```
+
+---
+
+## Forgot Password (Lupa Password) — Rencana Implementasi
+
+Fitur **Lupa Password** menggunakan mekanisme pendelegasian keamanan melalui **Firebase Phone Auth (OTP SMS)**. Dengan cara ini, aplikasi Flutter dan Backend Go tidak perlu mengelola server SMS gateway atau menyimpan kode OTP.
+
+### Alur Arsitektur Kriptografi
+
+1.  **Aplikasi Flutter (Client)**: Bertugas meminta SMS ke Firebase, memunculkan form input angka OTP, dan mengirimkan kode tersebut ke Firebase SDK untuk divalidasi.
+2.  **Firebase SDK (Google)**: Jika OTP benar, SDK ini mencetak sebuah `idToken` (surat lulus verifikasi yang ditandatangani secara digital oleh Google).
+3.  **Backend Go (Server)**: Menerima `idToken` dari Flutter, memverifikasi tanda tangannya menggunakan kunci publik Google, lalu mengizinkan ubah password jika token valid.
+
+### Sequence Diagram — Lupa Password Flow
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant UI as ForgotPasswordPage
+    participant Bloc as AuthBloc
+    participant FB as Firebase SDK
+    participant Repo as AuthRepositoryImpl
+    participant BE as Go Backend API
+
+    User->>UI: Input Nomor HP (+62...)
+    UI->>Bloc: add(AuthForgotPasswordRequested(phone))
+    Bloc->>FB: FirebaseAuth.verifyPhoneNumber()
+    
+    FB-->>User: SMS OTP Terkirim
+    
+    User->>UI: Input OTP (6 digit)
+    UI->>Bloc: add(AuthVerifyOTPRequested(otp))
+    
+    Bloc->>FB: PhoneAuthProvider.credential()
+    FB-->>Bloc: Returns `firebase_id_token` (JWT)
+    
+    Bloc->>Repo: resetPassword(firebase_id_token, new_password)
+    Repo->>BE: POST /api/v1/auth/password/forgot
+    
+    BE->>BE: Verifikasi Kriptografi Token & Update DB
+    BE-->>Repo: 200 OK (Success)
+    
+    Repo-->>Bloc: Right(Success)
+    Bloc->>UI: emit(AuthStatus.passwordResetSuccess)
+    
+    UI-->>User: Tampilkan SnackBar Sukses, kembali ke LoginPage
+```
+
+### Kebutuhan Setup Flutter
+- Penambahan package `firebase_auth` ke `pubspec.yaml`.
+- Menggunakan `TextField` dengan `autofillHints: const [AutofillHints.oneTimeCode]` agar OTP dari SMS bisa otomatis dibaca oleh *keyboard* iOS dan Android tanpa perlu *permission* baca SMS.
+- Registrasi SHA-1 & SHA-256 Android di Firebase Console.
+- Konfigurasi APNs & Background Modes di iOS untuk penerimaan *Silent Push* dari Firebase (sebagai langkah anti-spam).
