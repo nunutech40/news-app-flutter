@@ -7,6 +7,7 @@ import 'package:news_app/features/auth/data/models/user_model.dart';
 import 'package:news_app/features/auth/domain/entities/auth_tokens.dart';
 import 'package:news_app/features/auth/domain/entities/user.dart';
 import 'package:news_app/features/auth/domain/repositories/auth_repository.dart';
+import 'package:news_app/core/utils/exception_mapper.dart';
 import 'package:news_app/core/utils/repository_helper.dart';
 import 'package:news_app/features/auth/domain/services/firebase_otp_service.dart';
 import 'package:news_app/features/auth/domain/services/oauth_service.dart';
@@ -113,7 +114,7 @@ class AuthRepositoryImpl implements AuthRepository {
         ));
       }
       return Left(ServerFailure(
-        message: e.message,
+        message: ExceptionMapper.toMessage(e),
         statusCode: e.statusCode,
       ));
     } on NetworkException catch (e) {
@@ -130,9 +131,9 @@ class AuthRepositoryImpl implements AuthRepository {
           preferences: cached['preferences'] as String? ?? '',
         ));
       }
-      return Left(NetworkFailure(message: e.message));
+      return Left(NetworkFailure(message: ExceptionMapper.toMessage(e)));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: ExceptionMapper.toMessage(e)));
     }
   }
 
@@ -227,11 +228,11 @@ class AuthRepositoryImpl implements AuthRepository {
       
       return const Right(null);
     } on ServerException catch (e) {
-      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
+      return Left(ServerFailure(message: ExceptionMapper.toMessage(e), statusCode: e.statusCode));
     } on NetworkException catch (e) {
-      return Left(NetworkFailure(message: e.message));
+      return Left(NetworkFailure(message: ExceptionMapper.toMessage(e)));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: ExceptionMapper.toMessage(e)));
     }
   }
 }
