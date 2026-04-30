@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:news_app/firebase_options.dart';
 
 import 'package:flutter/foundation.dart';
@@ -91,7 +92,8 @@ void main() async {
     if (kDebugMode) {
       debugPrint('🔴 FlutterError: ${details.exceptionAsString()}');
     }
-    // TODO: Tambahkan FirebaseCrashlytics.instance.recordFlutterError(details);
+    // Record to Firebase Crashlytics
+    FirebaseCrashlytics.instance.recordFlutterFatalError(details);
   };
 
   // Tangkap error async yang tidak tertangkap oleh FlutterError.onError
@@ -100,7 +102,8 @@ void main() async {
       debugPrint('🔴 PlatformError: $error');
       debugPrint(stack.toString());
     }
-    // TODO: Tambahkan FirebaseCrashlytics.instance.recordError(error, stack);
+    // Record to Firebase Crashlytics
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
     return true; // true = error sudah ditangani, jangan crash app
   };
 
