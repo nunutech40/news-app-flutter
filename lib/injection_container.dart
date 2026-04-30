@@ -12,19 +12,24 @@ import 'package:news_app/core/data/repositories/notification_repository_impl.dar
 import 'package:news_app/features/auth/data/datasources/auth_local_datasource.dart';
 import 'package:news_app/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:news_app/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:news_app/features/auth/data/services/firebase_otp_service_impl.dart';
 
 // Auth - Domain
 import 'package:news_app/features/auth/domain/repositories/auth_repository.dart';
+import 'package:news_app/features/auth/domain/services/firebase_otp_service.dart';
 import 'package:news_app/features/auth/domain/usecases/get_profile_usecase.dart';
 import 'package:news_app/features/auth/domain/usecases/login_usecase.dart';
 import 'package:news_app/features/auth/domain/usecases/logout_usecase.dart';
 import 'package:news_app/features/auth/domain/usecases/register_usecase.dart';
+import 'package:news_app/features/auth/domain/usecases/request_otp_usecase.dart';
+import 'package:news_app/features/auth/domain/usecases/reset_password_usecase.dart';
 import 'package:news_app/features/auth/domain/usecases/update_profile_usecase.dart';
 import 'package:news_app/features/auth/domain/usecases/social_login_usecase.dart';
 
 // Auth - Presentation
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:news_app/features/auth/presentation/cubit/profile_cubit.dart';
+import 'package:news_app/features/auth/presentation/cubit/forgot_password_cubit.dart';
 
 // News - Data
 import 'package:news_app/features/news/data/datasources/news_remote_datasource.dart';
@@ -130,10 +135,15 @@ Future<void> initDependencies() async {
   // ==================== Repository ====================
   // LazySingleton: Repository STATELESS, hanya orkestrator antar datasource.
   // Tidak ada alasan untuk membuat ulang di setiap pemanggilan.
+  sl.registerLazySingleton<FirebaseOTPService>(
+    () => FirebaseOTPServiceImpl(),
+  );
+
   sl.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(
       remoteDatasource: sl(),
       localDatasource: sl(),
+      firebaseOtpService: sl(),
     ),
   );
 
@@ -151,6 +161,8 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => UpdateProfileUseCase(sl(), sl()));
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
   sl.registerLazySingleton(() => SocialLoginUseCase(sl()));
+  sl.registerLazySingleton(() => RequestOTPUseCase(sl()));
+  sl.registerLazySingleton(() => ResetPasswordUseCase(sl()));
 
   // ==================== BLoC ====================
   // GlobalAlertBloc is a singleton covering the whole app to intercept Dio network errors automatically
@@ -209,5 +221,9 @@ Future<void> initDependencies() async {
   sl.registerFactory(() => ProfileCubit(
     updateProfileUseCase: sl(),
     apiClient: sl(),
+  ));
+  sl.registerFactory(() => ForgotPasswordCubit(
+    requestOTPUseCase: sl(),
+    resetPasswordUseCase: sl(),
   ));
 }

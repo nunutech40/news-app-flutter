@@ -26,6 +26,11 @@ abstract class AuthRemoteDatasource {
   Future<UserModel> updateProfile(UserModel user);
 
   Future<void> logout({required String refreshToken});
+
+  Future<void> resetPasswordForgot({
+    required String firebaseIdToken,
+    required String newPassword,
+  });
 }
 
 class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
@@ -124,5 +129,26 @@ class AuthRemoteDatasourceImpl implements AuthRemoteDatasource {
     throw ServerException(
       message: response['message'] as String? ?? 'Failed to update profile',
     );
+  }
+
+  @override
+  Future<void> resetPasswordForgot({
+    required String firebaseIdToken,
+    required String newPassword,
+  }) async {
+    final response = await apiClient.request(
+      'POST',
+      ApiConstants.forgotPassword,
+      data: {
+        'firebase_id_token': firebaseIdToken,
+        'new_password': newPassword,
+      },
+    );
+
+    if (response['success'] != true) {
+      throw ServerException(
+        message: response['message'] as String? ?? 'Failed to reset password',
+      );
+    }
   }
 }

@@ -32,4 +32,14 @@ abstract class AuthRepository {
 
   /// Check if user is authenticated (has valid token)
   Future<bool> isAuthenticated();
+
+  /// Request OTP for Forgot Password
+  Future<Either<Failure, String>> requestOTP({required String phoneNumber});
+
+  /// Reset Password with OTP verification
+  Future<Either<Failure, void>> resetPasswordWithOTP({
+    required String verificationId,
+    required String smsCode,
+    required String newPassword,
+  });
 }

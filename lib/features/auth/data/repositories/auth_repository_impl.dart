@@ -7,15 +7,19 @@ import 'package:news_app/features/auth/data/models/user_model.dart';
 import 'package:news_app/features/auth/domain/entities/auth_tokens.dart';
 import 'package:news_app/features/auth/domain/entities/user.dart';
 import 'package:news_app/features/auth/domain/repositories/auth_repository.dart';
+import 'package:news_app/core/utils/repository_helper.dart';
+import 'package:news_app/features/auth/domain/services/firebase_otp_service.dart';
 import 'package:news_app/features/auth/domain/services/oauth_service.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDatasource remoteDatasource;
   final AuthLocalDatasource localDatasource;
+  final FirebaseOTPService firebaseOtpService;
 
   AuthRepositoryImpl({
     required this.remoteDatasource,
     required this.localDatasource,
+    required this.firebaseOtpService,
   });
 
   @override
@@ -24,23 +28,13 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String password,
   }) async {
-    try {
-      final user = await remoteDatasource.register(
+    return RepositoryHelper.execute(() async {
+      return await remoteDatasource.register(
         name: name,
         email: email,
         password: password,
       );
-      return Right(user);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(
-        message: e.message,
-        statusCode: e.statusCode,
-      ));
-    } on NetworkException catch (e) {
-      return Left(NetworkFailure(message: e.message));
-    } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
-    }
+    });
   }
 
   @override
@@ -48,7 +42,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String password,
   }) async {
-    try {
+    return RepositoryHelper.execute(() async {
       final tokens = await remoteDatasource.login(
         email: email,
         password: password,
@@ -60,22 +54,13 @@ class AuthRepositoryImpl implements AuthRepository {
         refreshToken: tokens.refreshToken,
       );
 
-      return Right(tokens);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(
-        message: e.message,
-        statusCode: e.statusCode,
-      ));
-    } on NetworkException catch (e) {
-      return Left(NetworkFailure(message: e.message));
-    } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
-    }
+      return tokens;
+    });
   }
 
   @override
   Future<Either<Failure, AuthTokens>> signInWithOAuth(OAuthService service) async {
-    try {
+    return RepositoryHelper.execute(() async {
       // 1. Get token from the provider (e.g. Google SDK popup)
       final idToken = await service.signIn();
 
@@ -91,17 +76,8 @@ class AuthRepositoryImpl implements AuthRepository {
         refreshToken: tokens.refreshToken,
       );
 
-      return Right(tokens);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(
-        message: e.message,
-        statusCode: e.statusCode,
-      ));
-    } on NetworkException catch (e) {
-      return Left(NetworkFailure(message: e.message));
-    } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
-    }
+      return tokens;
+    });
   }
 
   @override
@@ -162,7 +138,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Either<Failure, User>> updateProfile(User user) async {
-    try {
+    return RepositoryHelper.execute(() async {
       // Cast the entity back to a model (or create one on the fly)
       final userModel = UserModel(
         id: user.id,
@@ -187,14 +163,8 @@ class AuthRepositoryImpl implements AuthRepository {
         preferences: updatedUser.preferences,
       );
 
-      return Right(updatedUser);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
-    } on NetworkException catch (e) {
-      return Left(NetworkFailure(message: e.message));
-    } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
-    }
+      return updatedUser;
+    });
   }
 
   @override
@@ -223,5 +193,47 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<bool> isAuthenticated() async {
     return await localDatasource.hasTokens();
+  }
+
+  @override
+  Future<Either<Failure, String>> requestOTP({required String phoneNumber}) async {
+    return await firebaseOtpService.requestOTP(phoneNumber);
+  }
+
+  @override
+  Future<Either<Failure, void>> resetPasswordWithOTP({
+    required String verificationId,
+    required String smsCode,
+    required String newPassword,
+  }) async {
+    try {
+      // 1. Verify OTP with Firebase to get the ID Token
+      final idTokenEither = await firebaseOtpService.verifyOTP(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+
+      return await idTokenEither.fold(
+        (failure) async => Left(failure),
+        (idToken) async {
+          // 2. Send the ID Token to our backend to reset the password
+          await remoteDatasource.resetPasswordForgot(
+            firebaseIdToken: idToken,
+            newPassword: newPassword,
+          );
+          
+          // 3. Clear local tokens to force relogin
+          await localDatasource.clearAll();
+          
+          return const Right(null);
+        },
+      );
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(message: e.message));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
   }
 }

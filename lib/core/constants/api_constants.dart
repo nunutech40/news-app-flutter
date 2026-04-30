@@ -10,6 +10,7 @@ class ApiConstants {
   static const String refreshToken = '/api/v1/auth/refresh';
   static const String profile = '/api/v1/auth/me';
   static const String logout = '/api/v1/auth/logout';
+  static const String forgotPassword = '/api/v1/auth/password/forgot';
   static const String health = '/health';
 
   // OAuth Clients
