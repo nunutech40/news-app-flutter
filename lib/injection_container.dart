@@ -44,6 +44,7 @@ import 'package:news_app/features/news/domain/usecases/get_news_feed_usecase.dar
 import 'package:news_app/features/news/domain/usecases/get_bookmarks_usecase.dart';
 import 'package:news_app/features/news/domain/usecases/toggle_bookmark_usecase.dart';
 import 'package:news_app/features/news/domain/usecases/check_bookmark_status_usecase.dart';
+import 'package:news_app/features/auth/domain/usecases/verify_otp_usecase.dart';
 
 // News - Presentation
 import 'package:news_app/features/news/presentation/cubit/category_cubit.dart';
@@ -162,6 +163,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
   sl.registerLazySingleton(() => SocialLoginUseCase(sl()));
   sl.registerLazySingleton(() => RequestOTPUseCase(sl()));
+  sl.registerLazySingleton(() => VerifyOTPUseCase(sl()));
   sl.registerLazySingleton(() => ResetPasswordUseCase(sl()));
 
   // ==================== BLoC ====================
@@ -222,8 +224,11 @@ Future<void> initDependencies() async {
     updateProfileUseCase: sl(),
     apiClient: sl(),
   ));
-  sl.registerFactory(() => ForgotPasswordCubit(
-    requestOTPUseCase: sl(),
-    resetPasswordUseCase: sl(),
-  ));
+  sl.registerFactory(
+    () => ForgotPasswordCubit(
+      requestOTPUseCase: sl(),
+      verifyOTPUseCase: sl(),
+      resetPasswordUseCase: sl(),
+    ),
+  );
 }

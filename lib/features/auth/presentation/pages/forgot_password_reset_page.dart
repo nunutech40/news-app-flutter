@@ -1,35 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pinput/pinput.dart';
 import 'package:news_app/core/theme/app_theme.dart';
 import 'package:news_app/features/auth/presentation/cubit/forgot_password_cubit.dart';
 import 'package:news_app/injection_container.dart';
 
-class ForgotPasswordVerifyPage extends StatefulWidget {
-  final String verificationId;
+class ForgotPasswordResetPage extends StatefulWidget {
+  final String firebaseIdToken;
 
-  const ForgotPasswordVerifyPage({super.key, required this.verificationId});
+  const ForgotPasswordResetPage({super.key, required this.firebaseIdToken});
 
   @override
-  State<ForgotPasswordVerifyPage> createState() => _ForgotPasswordVerifyPageState();
+  State<ForgotPasswordResetPage> createState() => _ForgotPasswordResetPageState();
 }
 
-class _ForgotPasswordVerifyPageState extends State<ForgotPasswordVerifyPage> {
-  final _otpController = TextEditingController();
+class _ForgotPasswordResetPageState extends State<ForgotPasswordResetPage> {
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
-    _otpController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
   void _onSubmit(BuildContext context) {
     if (_formKey.currentState!.validate()) {
-      context.read<ForgotPasswordCubit>().verifyOTP(
-        verificationId: widget.verificationId,
-        smsCode: _otpController.text.trim(),
+      context.read<ForgotPasswordCubit>().submitNewPassword(
+        firebaseIdToken: widget.firebaseIdToken,
+        newPassword: _passwordController.text,
       );
     }
   }
@@ -40,7 +43,7 @@ class _ForgotPasswordVerifyPageState extends State<ForgotPasswordVerifyPage> {
       create: (_) => sl<ForgotPasswordCubit>(),
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Verifikasi OTP'),
+          title: const Text('Buat Password Baru'),
           backgroundColor: AppTheme.backgroundDark,
           elevation: 0,
         ),
@@ -50,9 +53,15 @@ class _ForgotPasswordVerifyPageState extends State<ForgotPasswordVerifyPage> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(state.message), backgroundColor: AppTheme.error),
               );
-            } else if (state is OTPVerifiedSuccess) {
-              // Navigasi ke halaman reset password dengan membawa firebaseIdToken
-              context.push('/forgot-password/reset', extra: state.firebaseIdToken);
+            } else if (state is PasswordResetSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Password berhasil diubah! Silakan login kembali.'),
+                  backgroundColor: AppTheme.success,
+                ),
+              );
+              // Kembali ke halaman login dan hapus stack sebelumnya
+              context.go('/login');
             }
           },
           builder: (context, state) {
@@ -67,13 +76,13 @@ class _ForgotPasswordVerifyPageState extends State<ForgotPasswordVerifyPage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const Icon(
-                        Icons.mark_email_read_rounded,
+                        Icons.lock_reset_rounded,
                         size: 80,
                         color: AppTheme.primaryColor,
                       ),
                       const SizedBox(height: 24),
                       const Text(
-                        'Masukkan Kode OTP',
+                        'Password Baru',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -83,7 +92,7 @@ class _ForgotPasswordVerifyPageState extends State<ForgotPasswordVerifyPage> {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        'Kode verifikasi 6 digit telah dikirimkan ke nomor Anda via SMS. Silakan masukkan kode tersebut di bawah ini.',
+                        'Buat password baru yang kuat dan mudah diingat. Minimal 6 karakter.',
                         style: TextStyle(
                           fontSize: 14,
                           color: AppTheme.textSecondary,
@@ -92,66 +101,79 @@ class _ForgotPasswordVerifyPageState extends State<ForgotPasswordVerifyPage> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 40),
-                      Pinput(
-                        controller: _otpController,
-                        length: 6,
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
                         enabled: !isLoading,
-                        obscureText: true,
-                        obscuringCharacter: '•',
-                        keyboardType: TextInputType.number,
-                        defaultPinTheme: PinTheme(
-                          width: 56,
-                          height: 56,
-                          textStyle: const TextStyle(
-                            fontSize: 22,
-                            color: AppTheme.textPrimary,
-                            fontWeight: FontWeight.bold,
+                        style: const TextStyle(color: AppTheme.textPrimary),
+                        decoration: InputDecoration(
+                          labelText: 'Password Baru',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
                           ),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppTheme.surfaceElevated),
+                          border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            color: AppTheme.backgroundDark,
                           ),
-                        ),
-                        focusedPinTheme: PinTheme(
-                          width: 56,
-                          height: 56,
-                          textStyle: const TextStyle(
-                            fontSize: 22,
-                            color: AppTheme.textPrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppTheme.primaryColor, width: 2),
+                          enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            color: AppTheme.backgroundDark,
-                          ),
-                        ),
-                        errorPinTheme: PinTheme(
-                          width: 56,
-                          height: 56,
-                          textStyle: const TextStyle(
-                            fontSize: 22,
-                            color: AppTheme.textPrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppTheme.error),
-                            borderRadius: BorderRadius.circular(12),
-                            color: AppTheme.backgroundDark,
+                            borderSide: const BorderSide(color: AppTheme.surfaceElevated),
                           ),
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Kode OTP tidak boleh kosong';
+                            return 'Password baru tidak boleh kosong';
                           }
                           if (value.length < 6) {
-                            return 'Kode OTP harus 6 digit';
+                            return 'Password minimal 6 karakter';
                           }
                           return null;
                         },
                       ),
-
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _confirmPasswordController,
+                        obscureText: _obscureConfirmPassword,
+                        enabled: !isLoading,
+                        style: const TextStyle(color: AppTheme.textPrimary),
+                        decoration: InputDecoration(
+                          labelText: 'Konfirmasi Password Baru',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscureConfirmPassword = !_obscureConfirmPassword;
+                              });
+                            },
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppTheme.surfaceElevated),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Konfirmasi password tidak boleh kosong';
+                          }
+                          if (value != _passwordController.text) {
+                            return 'Konfirmasi password tidak cocok';
+                          }
+                          return null;
+                        },
+                      ),
                       const SizedBox(height: 40),
                       ElevatedButton(
                         onPressed: isLoading ? null : () => _onSubmit(context),
@@ -172,7 +194,7 @@ class _ForgotPasswordVerifyPageState extends State<ForgotPasswordVerifyPage> {
                                 ),
                               )
                             : const Text(
-                                'Verifikasi OTP',
+                                'Simpan Password Baru',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,

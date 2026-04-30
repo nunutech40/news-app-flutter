@@ -36,10 +36,15 @@ abstract class AuthRepository {
   /// Request OTP for Forgot Password
   Future<Either<Failure, String>> requestOTP({required String phoneNumber});
 
-  /// Reset Password with OTP verification
-  Future<Either<Failure, void>> resetPasswordWithOTP({
+  /// Verify OTP and get Firebase ID Token
+  Future<Either<Failure, String>> verifyOTP({
     required String verificationId,
     required String smsCode,
+  });
+
+  /// Reset Password using Firebase ID Token
+  Future<Either<Failure, void>> resetPassword({
+    required String firebaseIdToken,
     required String newPassword,
   });
 }

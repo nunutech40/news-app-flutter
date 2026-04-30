@@ -381,49 +381,55 @@ Mengikuti standar *Clean Architecture* aplikasi ini, fitur yang bersifat *epheme
 ```mermaid
 sequenceDiagram
     actor User
-    participant UI as ForgotPasswordPage
+    participant UI_Phone as ForgotPasswordPhonePage
+    participant UI_OTP as ForgotPasswordOTPPage
+    participant UI_Reset as ForgotPasswordResetPage
     participant Cubit as ForgotPasswordCubit
-    participant UCReq as RequestOTPUseCase
-    participant UCRes as ResetPasswordUseCase
     participant Repo as AuthRepositoryImpl
     participant FBService as FirebaseOTPService
     participant BE as Go Backend API
 
     Note over User, BE: FASE 1: Meminta OTP (Request OTP)
-    User->>UI: Input Nomor HP (+62...)
-    UI->>Cubit: requestOTP(phone)
-    Cubit->>UCReq: call(phone)
-    UCReq->>Repo: requestOTP(phone)
+    User->>UI_Phone: Input Nomor HP (+62...)
+    UI_Phone->>Cubit: requestOTP(phone)
+    Cubit->>Repo: requestOTP(phone)
     Repo->>FBService: verifyPhoneNumber(phone)
     FBService-->>User: SMS OTP Terkirim oleh Google
     FBService-->>Repo: Returns `verificationId`
-    Repo-->>UCReq: Right(verificationId)
-    UCReq-->>Cubit: Right(verificationId)
+    Repo-->>Cubit: Right(verificationId)
     Cubit->>Cubit: Simpan `verificationId` di State
-    Cubit->>UI: emit(ForgotPasswordState.otpSent)
+    Cubit->>UI_Phone: emit(ForgotPasswordState.otpSent)
+    UI_Phone-->>User: Navigasi ke Halaman OTP
     
-    Note over User, BE: FASE 2: Verifikasi & Reset Password
-    User->>UI: Input OTP & Password Baru
-    UI->>Cubit: verifyAndReset(otp, newPassword)
-    Cubit->>UCRes: call(verificationId, otp, newPassword)
-    UCRes->>Repo: resetPassword(verificationId, otp, newPassword)
+    Note over User, BE: FASE 2: Verifikasi OTP
+    User->>UI_OTP: Input 6 digit OTP
+    UI_OTP->>Cubit: verifyOTP(otp)
+    Cubit->>Repo: verifyOTP(verificationId, otp)
     
     rect rgb(255, 243, 205)
-        Note over Repo, FBService: Eksekusi Infra: Menukar OTP menjadi JWT
-        Repo->>FBService: getFirebaseIdToken(verificationId, otp)
-        FBService->>FBService: PhoneAuthProvider.credential()
+        Note over Repo, FBService: Menukar OTP menjadi JWT Firebase
+        Repo->>FBService: signInWithCredential(verificationId, otp)
         FBService-->>Repo: 🔑 Returns `firebase_id_token`
     end
+    
+    Repo-->>Cubit: Right(firebase_id_token)
+    Cubit->>Cubit: Simpan `firebase_id_token` di State
+    Cubit->>UI_OTP: emit(ForgotPasswordState.otpVerified)
+    UI_OTP-->>User: Navigasi ke Halaman Reset Password
+    
+    Note over User, BE: FASE 3: Set Password Baru
+    User->>UI_Reset: Input Password Baru
+    UI_Reset->>Cubit: submitNewPassword(newPassword)
+    Cubit->>Repo: resetPassword(firebase_id_token, newPassword)
     
     Note over Repo, BE: Kirim ke Backend untuk Validasi Kriptografi
     Repo->>BE: POST /api/v1/auth/password/forgot {idToken, newPassword}
     BE->>BE: Verifikasi Kriptografi Token & Update DB
     BE-->>Repo: 200 OK (Success)
     
-    Repo-->>UCRes: Right(Success)
-    UCRes-->>Cubit: Right(Success)
-    Cubit->>UI: emit(ForgotPasswordState.success)
-    UI-->>User: Tampilkan SnackBar Sukses, kembali ke LoginPage
+    Repo-->>Cubit: Right(Success)
+    Cubit->>UI_Reset: emit(ForgotPasswordState.success)
+    UI_Reset-->>User: Tampilkan SnackBar Sukses, kembali ke LoginPage
 ```
 
 ### Kebutuhan Setup Flutter

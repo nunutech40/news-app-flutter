@@ -201,33 +201,31 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, void>> resetPasswordWithOTP({
+  Future<Either<Failure, String>> verifyOTP({
     required String verificationId,
     required String smsCode,
+  }) async {
+    return await firebaseOtpService.verifyOTP(
+      verificationId: verificationId,
+      smsCode: smsCode,
+    );
+  }
+
+  @override
+  Future<Either<Failure, void>> resetPassword({
+    required String firebaseIdToken,
     required String newPassword,
   }) async {
     try {
-      // 1. Verify OTP with Firebase to get the ID Token
-      final idTokenEither = await firebaseOtpService.verifyOTP(
-        verificationId: verificationId,
-        smsCode: smsCode,
+      await remoteDatasource.resetPasswordForgot(
+        firebaseIdToken: firebaseIdToken,
+        newPassword: newPassword,
       );
-
-      return await idTokenEither.fold(
-        (failure) async => Left(failure),
-        (idToken) async {
-          // 2. Send the ID Token to our backend to reset the password
-          await remoteDatasource.resetPasswordForgot(
-            firebaseIdToken: idToken,
-            newPassword: newPassword,
-          );
-          
-          // 3. Clear local tokens to force relogin
-          await localDatasource.clearAll();
-          
-          return const Right(null);
-        },
-      );
+      
+      // Clear local tokens to force relogin
+      await localDatasource.clearAll();
+      
+      return const Right(null);
     } on ServerException catch (e) {
       return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
     } on NetworkException catch (e) {

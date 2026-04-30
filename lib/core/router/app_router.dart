@@ -6,6 +6,7 @@ import 'package:news_app/features/auth/presentation/pages/login_page.dart';
 import 'package:news_app/features/auth/presentation/pages/register_page.dart';
 import 'package:news_app/features/auth/presentation/pages/forgot_password_phone_page.dart';
 import 'package:news_app/features/auth/presentation/pages/forgot_password_verify_page.dart';
+import 'package:news_app/features/auth/presentation/pages/forgot_password_reset_page.dart';
 import 'package:news_app/features/news/presentation/cubit/category_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/news_feed_cubit.dart';
 import 'package:news_app/features/dashboard/presentation/pages/dashboard_page.dart';
@@ -95,6 +96,14 @@ class AppRouter {
         builder: (context, state) {
           final verificationId = state.extra as String? ?? '';
           return ForgotPasswordVerifyPage(verificationId: verificationId);
+        },
+      ),
+      GoRoute(
+        path: '/forgot-password/reset',
+        name: 'forgotPasswordReset',
+        builder: (context, state) {
+          final firebaseIdToken = state.extra as String? ?? '';
+          return ForgotPasswordResetPage(firebaseIdToken: firebaseIdToken);
         },
       ),
       GoRoute(
