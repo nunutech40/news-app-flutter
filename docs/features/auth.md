@@ -382,7 +382,7 @@ Mengikuti standar *Clean Architecture* aplikasi ini, fitur yang bersifat *epheme
 sequenceDiagram
     actor User
     participant UI_Phone as ForgotPasswordPhonePage
-    participant UI_OTP as ForgotPasswordOTPPage
+    participant UI_OTP as ForgotPasswordVerifyPage
     participant UI_Reset as ForgotPasswordResetPage
     participant Cubit as ForgotPasswordCubit
     participant Repo as AuthRepositoryImpl

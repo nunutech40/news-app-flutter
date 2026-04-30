@@ -1007,6 +1007,13 @@ class CacheFailure extends Failure { ... }
 class UnauthorizedFailure extends Failure { ... }
 ```
 
+### 8.4 Centralized Error Wrapping (RepositoryHelper & ExceptionMapper)
+
+Untuk menjamin *Zero-Leak Policy* (tidak ada error teknis dari pihak ke-3 yang bocor ke UI), aplikasi menggunakan kombinasi `RepositoryHelper` dan `ExceptionMapper`:
+
+1. **`RepositoryHelper.execute`**: Fungsi *wrapper* yang wajib membungkus semua pemanggilan API/Datasource di dalam Repository (kecuali skenario *custom fallback*). Fungsinya adalah menangkap `Exception` apapun (termasuk error *alien* seperti `PlatformException` atau `FirebaseAuthException`) dan mengubahnya menjadi tipe `Failure` yang dikenali domain.
+2. **`ExceptionMapper.toMessage`**: Mesin penggiling pusat. Semua error (*ServerException*, *NetworkException*, atau error tak terduga) akan disaring di sini. Jika ada kebocoran pesan teknis (seperti "panic: sql connection error" atau "An internal error has occurred"), fungsi `sanitizeMessage` akan memblokirnya dan menggantinya dengan pesan bahasa Indonesia yang aman bagi pengguna (*"Sistem sedang mengalami gangguan"*).
+
 ### 8.4 ApiClient Centralized Error Mapping
 
 `ApiClient._handleDioError()` memetakan semua `DioException` ke Exception yang sesuai:
