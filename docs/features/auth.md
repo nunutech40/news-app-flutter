@@ -374,31 +374,39 @@ Fitur **Lupa Password** menggunakan mekanisme pendelegasian keamanan melalui **F
 
 ### Sequence Diagram — Lupa Password Flow (Clean Architecture)
 
-Mengikuti prinsip *Clean Architecture* seperti pada implementasi *Google Sign-In*, **AuthBloc (Presentation Layer) dilarang keras menyentuh Firebase SDK langsung**. Semua eksekusi infrastruktur (Firebase) dibungkus di dalam `FirebaseOTPService` (Data Layer) dan dikoordinasikan oleh `AuthRepositoryImpl`.
+Mengikuti standar *Clean Architecture* aplikasi ini, fitur yang bersifat *ephemeral* (berlangsung sementara di satu halaman) tidak boleh mengotori *Global State* (`AuthBloc`). Oleh karena itu, fitur ini akan dilayani oleh **`ForgotPasswordCubit`** lokal dan dijembatani oleh *UseCase*.
+
+**Lapisannya:** `UI` ➔ `ForgotPasswordCubit` ➔ `UseCase` ➔ `AuthRepositoryImpl` ➔ `FirebaseOTPService` & `ApiClient`.
 
 ```mermaid
 sequenceDiagram
     actor User
     participant UI as ForgotPasswordPage
-    participant Bloc as AuthBloc
+    participant Cubit as ForgotPasswordCubit
+    participant UCReq as RequestOTPUseCase
+    participant UCRes as ResetPasswordUseCase
     participant Repo as AuthRepositoryImpl
     participant FBService as FirebaseOTPService
     participant BE as Go Backend API
 
     Note over User, BE: FASE 1: Meminta OTP (Request OTP)
     User->>UI: Input Nomor HP (+62...)
-    UI->>Bloc: add(AuthRequestOTPEvent(phone))
-    Bloc->>Repo: requestOTP(phone)
+    UI->>Cubit: requestOTP(phone)
+    Cubit->>UCReq: call(phone)
+    UCReq->>Repo: requestOTP(phone)
     Repo->>FBService: verifyPhoneNumber(phone)
     FBService-->>User: SMS OTP Terkirim oleh Google
     FBService-->>Repo: Returns `verificationId`
-    Repo-->>Bloc: Simpan `verificationId` di State
-    Bloc->>UI: emit(AuthStatus.otpSent)
+    Repo-->>UCReq: Right(verificationId)
+    UCReq-->>Cubit: Right(verificationId)
+    Cubit->>Cubit: Simpan `verificationId` di State
+    Cubit->>UI: emit(ForgotPasswordState.otpSent)
     
     Note over User, BE: FASE 2: Verifikasi & Reset Password
     User->>UI: Input OTP & Password Baru
-    UI->>Bloc: add(AuthVerifyAndResetEvent(otp, newPassword))
-    Bloc->>Repo: resetPassword(verificationId, otp, newPassword)
+    UI->>Cubit: verifyAndReset(otp, newPassword)
+    Cubit->>UCRes: call(verificationId, otp, newPassword)
+    UCRes->>Repo: resetPassword(verificationId, otp, newPassword)
     
     rect rgb(255, 243, 205)
         Note over Repo, FBService: Eksekusi Infra: Menukar OTP menjadi JWT
@@ -412,8 +420,9 @@ sequenceDiagram
     BE->>BE: Verifikasi Kriptografi Token & Update DB
     BE-->>Repo: 200 OK (Success)
     
-    Repo-->>Bloc: Right(Success)
-    Bloc->>UI: emit(AuthStatus.passwordResetSuccess)
+    Repo-->>UCRes: Right(Success)
+    UCRes-->>Cubit: Right(Success)
+    Cubit->>UI: emit(ForgotPasswordState.success)
     UI-->>User: Tampilkan SnackBar Sukses, kembali ke LoginPage
 ```
 
