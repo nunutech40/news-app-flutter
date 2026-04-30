@@ -372,38 +372,48 @@ Fitur **Lupa Password** menggunakan mekanisme pendelegasian keamanan melalui **F
 2.  **Firebase SDK (Google)**: Jika OTP benar, SDK ini mencetak sebuah `idToken` (surat lulus verifikasi yang ditandatangani secara digital oleh Google).
 3.  **Backend Go (Server)**: Menerima `idToken` dari Flutter, memverifikasi tanda tangannya menggunakan kunci publik Google, lalu mengizinkan ubah password jika token valid.
 
-### Sequence Diagram — Lupa Password Flow
+### Sequence Diagram — Lupa Password Flow (Clean Architecture)
+
+Mengikuti prinsip *Clean Architecture* seperti pada implementasi *Google Sign-In*, **AuthBloc (Presentation Layer) dilarang keras menyentuh Firebase SDK langsung**. Semua eksekusi infrastruktur (Firebase) dibungkus di dalam `FirebaseOTPService` (Data Layer) dan dikoordinasikan oleh `AuthRepositoryImpl`.
 
 ```mermaid
 sequenceDiagram
     actor User
     participant UI as ForgotPasswordPage
     participant Bloc as AuthBloc
-    participant FB as Firebase SDK
     participant Repo as AuthRepositoryImpl
+    participant FBService as FirebaseOTPService
     participant BE as Go Backend API
 
+    Note over User, BE: FASE 1: Meminta OTP (Request OTP)
     User->>UI: Input Nomor HP (+62...)
-    UI->>Bloc: add(AuthForgotPasswordRequested(phone))
-    Bloc->>FB: FirebaseAuth.verifyPhoneNumber()
+    UI->>Bloc: add(AuthRequestOTPEvent(phone))
+    Bloc->>Repo: requestOTP(phone)
+    Repo->>FBService: verifyPhoneNumber(phone)
+    FBService-->>User: SMS OTP Terkirim oleh Google
+    FBService-->>Repo: Returns `verificationId`
+    Repo-->>Bloc: Simpan `verificationId` di State
+    Bloc->>UI: emit(AuthStatus.otpSent)
     
-    FB-->>User: SMS OTP Terkirim
+    Note over User, BE: FASE 2: Verifikasi & Reset Password
+    User->>UI: Input OTP & Password Baru
+    UI->>Bloc: add(AuthVerifyAndResetEvent(otp, newPassword))
+    Bloc->>Repo: resetPassword(verificationId, otp, newPassword)
     
-    User->>UI: Input OTP (6 digit)
-    UI->>Bloc: add(AuthVerifyOTPRequested(otp))
+    rect rgb(255, 243, 205)
+        Note over Repo, FBService: Eksekusi Infra: Menukar OTP menjadi JWT
+        Repo->>FBService: getFirebaseIdToken(verificationId, otp)
+        FBService->>FBService: PhoneAuthProvider.credential()
+        FBService-->>Repo: 🔑 Returns `firebase_id_token`
+    end
     
-    Bloc->>FB: PhoneAuthProvider.credential()
-    FB-->>Bloc: Returns `firebase_id_token` (JWT)
-    
-    Bloc->>Repo: resetPassword(firebase_id_token, new_password)
-    Repo->>BE: POST /api/v1/auth/password/forgot
-    
+    Note over Repo, BE: Kirim ke Backend untuk Validasi Kriptografi
+    Repo->>BE: POST /api/v1/auth/password/forgot {idToken, newPassword}
     BE->>BE: Verifikasi Kriptografi Token & Update DB
     BE-->>Repo: 200 OK (Success)
     
     Repo-->>Bloc: Right(Success)
     Bloc->>UI: emit(AuthStatus.passwordResetSuccess)
-    
     UI-->>User: Tampilkan SnackBar Sukses, kembali ke LoginPage
 ```
 
