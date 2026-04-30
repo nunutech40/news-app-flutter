@@ -22,13 +22,18 @@ Package `pinput` bukanlah aplikasi pembaca SMS ajaib. Ia adalah *UI Wrapper* cer
 ### A. Mekanisme di iOS (Apple Privacy Model)
 Apple sangat mengutamakan privasi. Tidak ada aplikasi pihak ketiga di iOS (termasuk aplikasi buatan Anda) yang diizinkan untuk membaca kotak masuk SMS secara langsung (API diblokir penuh).
 
-**Algoritma iOS Autofill:**
-1. **Sinyal App:** Flutter (lewat Pinput) memanggil properti `autofillHints: [AutofillHints.oneTimeCode]`. Ini di-*compile* menjadi `UITextContentType.oneTimeCode` di Swift.
-2. **OS Mendengarkan:** Aplikasi hanya *"membuka mulut"* dan menunggu.
-3. **SMS Masuk:** *CoreTelephony* (Sistem dasar iOS) menerima SMS dari Firebase. Mesin *Machine Learning* iOS memindai kata kunci seperti *"code"*, *"kode"*, atau *"OTP"*.
-4. **Isolasi Keyboard:** OS **tidak** memberikan SMS ke aplikasi. Sebaliknya, OS secara aman memberikan 6 digit angka tersebut ke **Keyboard (QuickType)**.
-5. **User Consent:** Keyboard menampilkan tulisan *“From Messages: 123456”*.
-6. **Eksekusi:** JIKA user memencet (tap) teks tersebut, barulah Keyboard "menembakkan" angka 123456 ke dalam Pinput layaknya orang mengetik dengan kecepatan kilat.
+**Low-Level Arsitektur iOS Autofill (Menembus Native OS):**
+1. **Flutter Framework (Layer Dart):** Saat kita memanggil `autofillHints: [AutofillHints.oneTimeCode]`, layer UI Flutter membungkus data ini ke dalam format JSON/Map.
+2. **Platform Channels (Method Channel `flutter/textinput`):** Data JSON dikirimkan melewati *Flutter Engine* (C++) untuk menyeberang ke alam Native iOS.
+3. **FlutterTextInputPlugin (Layer Objective-C iOS):** Di sisi Native, plugin menangkap pesan tersebut dan memunculkan *"Hidden Proxy"* (komponen UI kasat mata buatan Native iOS). Di sinilah eksekusi API Apple dipanggil:
+   ```objective-c
+   proxyTextField.textContentType = UITextContentTypeOneTimeCode;
+   [proxyTextField becomeFirstResponder];
+   ```
+   *Fungsi `becomeFirstResponder` inilah yang secara harfiah merupakan "colekan" ke OS iOS untuk mengatakan: "Bangun! Buka Keyboard sekarang!"*
+4. **UIKit & Input Method API:** UIKit melihat properti `.oneTimeCode` dan meneruskan metadata ini ke **Input Method API** (sistem kernel yang mengontrol Keyboard).
+5. **NSDataDetector & CoreTelephony:** Keyboard secara rahasia membangunkan **CoreTelephony** (pembaca sinyal SMS background) dan **NSDataDetector** (Mesin *Machine Learning NLP* Apple). Mesin ML mencari pola 6 angka di sekitar kata "code" atau "OTP" pada SMS terbaru.
+6. **Eksekusi Akhir:** Angka yang diculik mesin ML dikirim ke layar Keyboard menjadi tombol saran *“From Messages: 123456”*. JIKA user menyetujui dan memencet tombol tersebut, angka tersebut akan ditembakkan kembali melintasi Method Channel, menembus Engine, dan akhirnya mendarat di widget Pinput Flutter.
 
 ### B. Mekanisme di Android
 Android memiliki pendekatan yang lebih fleksibel dan terbagi menjadi dua jalur teknologi:
