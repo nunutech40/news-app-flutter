@@ -556,6 +556,9 @@ class AuthRepositoryImpl implements AuthRepository {
 | `updateProfile()` | Remote: `PUT /api/v1/auth/me` → Local: update profile cache |
 | `logout()` | Remote: call API → Local: `clearAll()` always, even if API fails |
 | `isAuthenticated()` | Local: check token exists |
+| `requestPasswordResetOTP()` | Remote: Firebase OTP Service `verifyPhoneNumber` |
+| `verifyPasswordResetOTP()` | Remote: Firebase OTP Service `signInWithCredential` → returns ID Token |
+| `resetPassword()` | Remote: `POST /api/v1/auth/password/forgot` (mengirimkan Firebase ID Token dan password baru) |
 
 **News Repository orchestration:**
 
@@ -575,6 +578,16 @@ Menggunakan BLoC pattern. Detail di Section 9.
 
 Cross-cutting concerns yang digunakan oleh semua feature:
 
+#### Utils (RepositoryHelper & ExceptionMapper)
+Untuk mengurangi boilerplate *try-catch* di seluruh Repository, aplikasi menggunakan utility `RepositoryHelper`. Kelas ini bertugas membungkus pemanggilan data source (API/Local) ke dalam format fungsional (Dartz `Either`) dan melakukan standarisasi *mapping* Exception ke Failure menggunakan `ExceptionMapper`.
+
+```dart
+// Contoh penggunaan di Repository
+@override
+Future<Either<Failure, Profile>> getProfile() {
+  return RepositoryHelper.execute(() => remoteDatasource.getProfile());
+}
+```
 | Module | Responsibility |
 |--------|----------------|
 | `ApiClient` | Wrap Dio, centralized error handling |

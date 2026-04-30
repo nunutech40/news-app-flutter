@@ -29,7 +29,22 @@ class ExceptionMapper {
     if (e is NetworkException) {
       return 'Gagal terhubung ke server. Periksa koneksi internet Anda.';
     } else if (e is ServerException) {
-      // Pesan dari server sudah cukup informatif (misal: "Email sudah digunakan")
+      // Jika server mengembalikan 500+, itu pasti error internal, jangan tampilkan pesan raw
+      if (e.statusCode != null && e.statusCode! >= 500) {
+        return 'Terjadi kesalahan pada server. Tim kami sedang memperbaikinya.';
+      }
+
+      // Filter pesan teknis yang bocor dari backend (seperti SQL, panic, dll)
+      final msg = e.message.toLowerCase();
+      if (msg.contains('sql:') || 
+          msg.contains('panic:') || 
+          msg.contains('dial tcp') || 
+          msg.contains('connection refused') ||
+          msg.contains('null pointer')) {
+        return 'Sistem sedang mengalami gangguan. Silakan coba beberapa saat lagi.';
+      }
+
+      // Pesan aman dari server (misal: "Email sudah terdaftar", "Password salah")
       return e.message;
     } else if (e is UnauthorizedException) {
       return 'Sesi Anda telah berakhir. Silakan login kembali.';

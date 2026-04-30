@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:news_app/features/auth/presentation/pages/login_page.dart';
 import 'package:news_app/features/auth/presentation/pages/register_page.dart';
+import 'package:news_app/features/auth/presentation/pages/forgot_password_phone_page.dart';
+import 'package:news_app/features/auth/presentation/pages/forgot_password_verify_page.dart';
 import 'package:news_app/features/news/presentation/cubit/category_cubit.dart';
 import 'package:news_app/features/news/presentation/cubit/news_feed_cubit.dart';
 import 'package:news_app/features/dashboard/presentation/pages/dashboard_page.dart';
@@ -41,7 +43,8 @@ class AppRouter {
     redirect: (context, state) {
       final authStatus = authBloc.state.status;
       final isOnAuth = state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register';
+          state.matchedLocation == '/register' ||
+          state.matchedLocation.startsWith('/forgot-password');
       final isOnSplash = state.matchedLocation == '/splash';
 
       // 1. Sedang inisialisasi aplikasi (cek token di lokal), tahan user di Splash
@@ -80,6 +83,19 @@ class AppRouter {
         path: '/register',
         name: 'register',
         builder: (context, state) => const RegisterPage(),
+      ),
+      GoRoute(
+        path: '/forgot-password/phone',
+        name: 'forgotPasswordPhone',
+        builder: (context, state) => const ForgotPasswordPhonePage(),
+      ),
+      GoRoute(
+        path: '/forgot-password/verify',
+        name: 'forgotPasswordVerify',
+        builder: (context, state) {
+          final verificationId = state.extra as String? ?? '';
+          return ForgotPasswordVerifyPage(verificationId: verificationId);
+        },
       ),
       GoRoute(
         path: '/dashboard',

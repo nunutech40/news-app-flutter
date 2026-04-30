@@ -167,7 +167,28 @@ class _LoginPageState extends State<LoginPage>
                             hint: 'Enter your password',
                             validator: AppValidators.validatePassword,
                           ),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 8),
+
+                          // Forgot Password link
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () => context.pushNamed('forgotPasswordPhone'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppTheme.accentColor,
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: const Text(
+                                'Lupa Password?',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
 
                           // Login button
                           BlocBuilder<AuthBloc, AuthState>(

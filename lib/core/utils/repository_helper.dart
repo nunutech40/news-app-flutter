@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:news_app/core/error/exceptions.dart';
 import 'package:news_app/core/error/failures.dart';
+import 'package:news_app/core/utils/exception_mapper.dart';
 
 class RepositoryHelper {
   RepositoryHelper._();
@@ -20,15 +21,17 @@ class RepositoryHelper {
       final result = await action();
       return Right(result);
     } on ServerException catch (e) {
-      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
+      return Left(ServerFailure(message: ExceptionMapper.toMessage(e), statusCode: e.statusCode));
     } on NetworkException catch (e) {
-      return Left(NetworkFailure(message: e.message));
+      return Left(NetworkFailure(message: ExceptionMapper.toMessage(e)));
     } on UnauthorizedException catch (e) {
-      return Left(UnauthorizedFailure(message: e.message ?? 'Unauthorized. Please login again.'));
+      return Left(UnauthorizedFailure(message: ExceptionMapper.toMessage(e)));
     } on CacheException catch (e) {
-      return Left(CacheFailure(message: e.message ?? 'Cache error occurred.'));
+      return Left(CacheFailure(message: ExceptionMapper.toMessage(e)));
+    } on ParsingException catch (e) {
+      return Left(ServerFailure(message: ExceptionMapper.toMessage(e)));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: ExceptionMapper.toMessage(e)));
     }
   }
 }

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:news_app/firebase_options.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -41,6 +43,11 @@ void main() async {
   // Wajib dipanggil PERTAMA jika ada operasi async sebelum runApp().
   // Tanpa ini, pemanggilan SharedPreferences.getInstance() dll akan crash.
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inisialisasi Firebase (wajib dipanggil setelah ensureInitialized)
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // ── 2. ORIENTASI LAYAR ──────────────────────────────────────────────────
   // Kunci orientasi ke portrait saja. Kebanyakan app berita/sosmed

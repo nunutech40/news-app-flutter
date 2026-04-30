@@ -10,6 +10,7 @@ import 'package:news_app/features/auth/data/models/user_model.dart';
 import 'package:news_app/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:news_app/features/auth/domain/entities/auth_tokens.dart';
 import 'package:news_app/features/auth/domain/entities/user.dart';
+import 'package:news_app/features/auth/domain/services/firebase_otp_service.dart';
 
 // =============================================================================
 // ATURAN / PANDUAN UNIT TEST UNTUK REPOSITORY (CLEAN ARCHITECTURE)
@@ -36,12 +37,14 @@ import 'package:news_app/features/auth/domain/entities/user.dart';
 
 class MockRemoteDatasource extends Mock implements AuthRemoteDatasource {}
 class MockLocalDatasource extends Mock implements AuthLocalDatasource {}
+class MockFirebaseOTPService extends Mock implements FirebaseOTPService {}
 class FakeUserModel extends Fake implements UserModel {}
 
 void main() {
   late AuthRepositoryImpl repository;
   late MockRemoteDatasource mockRemote;
   late MockLocalDatasource mockLocal;
+  late MockFirebaseOTPService mockFirebaseOTP;
 
   setUpAll(() {
     registerFallbackValue(FakeUserModel());
@@ -50,9 +53,11 @@ void main() {
   setUp(() {
     mockRemote = MockRemoteDatasource();
     mockLocal = MockLocalDatasource();
+    mockFirebaseOTP = MockFirebaseOTPService();
     repository = AuthRepositoryImpl(
       remoteDatasource: mockRemote,
       localDatasource: mockLocal,
+      firebaseOtpService: mockFirebaseOTP,
     );
   });
 
