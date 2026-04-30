@@ -99,6 +99,8 @@ class _ForgotPasswordVerifyPageState extends State<ForgotPasswordVerifyPage> {
                         obscureText: true,
                         obscuringCharacter: '•',
                         keyboardType: TextInputType.number,
+                        // 1. Memancing iOS Keyboard memunculkan suggestion OTP (Juga berlaku untuk Android Keyboard)
+                        autofillHints: const [AutofillHints.oneTimeCode],
                         defaultPinTheme: PinTheme(
                           width: 56,
                           height: 56,
