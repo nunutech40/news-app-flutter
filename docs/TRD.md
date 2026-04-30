@@ -314,9 +314,25 @@ UseCase (Domain Layer)       → Repository  (Domain Contract / Interface)
 | `FlutterSecureStorage` | `AuthRepositoryImpl` (Data) | `AuthLocalDatasource` | Repository sudah jadi kontraknya untuk UseCase |
 | `Dio` (HTTP Client) | `AuthRepositoryImpl` (Data) | `AuthRemoteDatasource` | Repository sudah jadi kontraknya untuk UseCase |
 | `SharedPreferences` | `AuthRepositoryImpl` (Data) | `AuthLocalDatasource` | Repository sudah jadi kontraknya untuk UseCase |
+| `FirebaseAuth` (OTP & Social) | `AuthRepositoryImpl` (Data) | `FirebaseOTPService` / `OAuthService` | Repository bertugas sebagai orkestrator multi-sumber |
 
 > [!IMPORTANT]
 > **Domain Layer tidak pernah boleh tahu bahwa infrastruktur itu ada.** `UpdateProfileUseCase` tidak mengenal `FlutterLocalNotificationsPlugin`. Ia hanya mengenal `NotificationRepository` — sebuah antarmuka murni Dart. Ketika *library*-nya diganti atau diperbaharui, **tidak ada satu baris kode domain yang perlu diubah**.
+
+### 4.5 Studi Kasus: Mengapa `FirebaseOTPService` Diakses oleh Repository?
+
+Dalam implementasi otentikasi (Lupa Password & Login), SDK Firebase dibungkus dalam `FirebaseOTPService` dan diakses langsung oleh `AuthRepositoryImpl`. Sering muncul pertanyaan: **Mengapa tidak diakses oleh UseCase, atau dimasukkan ke dalam Datasource?**
+
+1. **Mengapa BUKAN oleh UseCase?**
+   `UseCase` berada di Domain Layer (inti bisnis yang murni). Ia tidak boleh tahu soal hal-hal berbau infrastruktur seperti "Google Firebase" atau "SMS SMS Code". Jika `VerifyOTPUseCase` memanggil layanan Firebase secara langsung (meski lewat interface), *usecase* tersebut akan dipaksa melakukan **orkestrasi**.
+   *Contoh salah di UseCase*: "Minta Firebase Token -> Kirim Token ke Backend API -> Simpan Token ke Local Storage".
+   Orkestrasi yang rumit seperti ini adalah tugas mutlak dari **Repository**. UseCase cukup memanggil `repository.verifyOTP(...)` dan menerima hasilnya.
+   
+2. **Mengapa BUKAN oleh Datasource?**
+   Tugas utama sebuah *Datasource* adalah membungkus operasi CRUD (Create, Read, Update, Delete) ke sebuah medium penyimpanan spesifik (seperti HTTP API backend kita, atau database lokal SQLite). Firebase OTP bukanlah database backend kita, melainkan sebuah SDK pihak ketiga yang menyediakan kapabilitas spesifik.
+   Memasukkan logika Firebase ke dalam `AuthRemoteDatasource` akan merusak prinsip *Single Responsibility*. `AuthRemoteDatasource` murni untuk komunikasi ke Go Backend kita, sedangkan `FirebaseOTPService` murni untuk komunikasi ke server Google.
+
+Oleh karena itu, **`AuthRepositoryImpl` bertindak sebagai Sang Dirigen (Orkestrator)**. Ia menerima *request* dari UseCase, lalu berkoordinasi dengan `FirebaseOTPService` (untuk verifikasi HP), meneruskan hasilnya ke `AuthRemoteDatasource` (untuk menukar token di backend), lalu menyimpannya lewat `AuthLocalDatasource` (ke dalam *secure storage*). Inilah wujud asli dan tujuan utama diciptakannya *Repository Pattern*!
 
 ---
 
