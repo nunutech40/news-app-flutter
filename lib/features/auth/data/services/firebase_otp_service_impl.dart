@@ -24,6 +24,7 @@ class FirebaseOTPServiceImpl implements FirebaseOTPService {
           // resolve the future here, or we can handle auto-sign-in later.
         },
         verificationFailed: (FirebaseAuthException e) {
+          print('🔥 FIREBASE OTP ERROR: [${e.code}] ${e.message}');
           if (!completer.isCompleted) {
             String safeMessage = 'Verifikasi nomor telepon gagal.';
             if (e.code == 'invalid-phone-number') {
