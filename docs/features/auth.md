@@ -152,78 +152,68 @@ Aplikasi mendukung dua jenis metode login yang memiliki alur berbeda, namun bera
 
 ### Perbandingan Metode Login
 
-| Aspek | Email & Password | Google Sign-In | GitHub Sign-In |
-|-------|-----------------|----------------|----------------|
-| **Credential asal** | User input form | Native OS / Google SDK | Webview / Browser Custom Tabs |
-| **Yang dikirim ke BE**| `{ email, password }` | `{ provider: 'google', idToken: '...' }` | `{ provider: 'github', idToken: '...' }` |
-| **Token Type** | N/A | **JWT (OpenID Connect)** | **Access Token (OAuth 2.0)** |
-| **Verifikasi di BE** | Hash bcrypt | Decode & Verifikasi SDK | Request `GET api.github.com/user` |
-| **Halaman Flutter?** | Ya (`LoginPage`) | Tidak (Native Popup) | Tidak (Webview Popup) |
-| **Status** | ✅ Done | ✅ Done | 🔄 Planned |
+| Aspek | Email & Password | Social Login (Google, GitHub, X) |
+|-------|-----------------|----------------------------------|
+| **Credential asal** | User input form | Firebase Auth (Native OS / Webview) |
+| **Yang dikirim ke BE**| `{ email, password }` | `{ provider: 'google/github/x', idToken: '...' }` |
+| **Token Type** | N/A | **Firebase ID Token (JWT)** |
+| **Verifikasi di BE** | Hash bcrypt | Firebase Admin SDK (`VerifyIDToken`) |
+| **Halaman Flutter?** | Ya (`LoginPage`) | Tidak (Native Popup / In-App Browser) |
+| **Status** | ✅ Done | 🔄 Planned |
 
 ---
 
-## Social Login — Rencana Implementasi
+## Social Login — Rencana Implementasi (Unified Firebase)
 
-### Filosofi Desain: Extensible OAuth
-
-Social Login dirancang dengan abstraksi `OAuthProvider` agar setiap provider baru (GitHub, Apple, Facebook) cukup menambah satu class implementasi tanpa mengubah BLoC, UseCase, atau Repository.
+### Filosofi Desain: Firebase sebagai Identity Hub
+Social Login dirancang menggunakan **Firebase Auth** sebagai jembatan tunggal. Baik user login menggunakan Google (via SDK native), GitHub, atau X (via Webview), Firebase akan menelan kompleksitas tersebut dan memuntahkan satu jenis token universal: **Firebase ID Token**. Backend Go kita *hanya* memverifikasi token Firebase ini.
 
 ```
 Domain Layer:
   abstract OAuthProvider
-    └── getIdToken() → Future<String>
+    └── signIn() → Future<String> (Returns Firebase ID Token)
 
 Data Layer:
   GoogleOAuthProvider  implements OAuthProvider  (✅ Done)
   GithubOAuthProvider  implements OAuthProvider  (🔄 Planned)
-  AppleOAuthProvider   implements OAuthProvider  (future)
-
-UseCase:
-  SocialLoginUseCase.call(OAuthProvider provider)
-    → provider.getIdToken() / getAccessToken()
-    → repository.loginWithOAuth(token, providerName)
+  TwitterOAuthProvider implements OAuthProvider  (🔄 Planned)
 
 AuthBloc:
   add(AuthSocialLoginRequested(provider: GoogleOAuthProvider()))
   add(AuthSocialLoginRequested(provider: GithubOAuthProvider()))
+  add(AuthSocialLoginRequested(provider: TwitterOAuthProvider()))
 ```
 
-> [!IMPORTANT]
-> **Apple Sign-In wajib ada** jika app dipublish di App Store dan menawarkan social login provider lain. Ini adalah aturan App Store Review Guidelines — app bisa direject jika tidak ada.
+### Diagram 4 — Unified Firebase Social Login Flow
 
-### Diagram 4 — Google Sign-In Flow
-
-Berbeda dengan login email/password yang langsung mengirim credential ke backend, Google Sign-In memerlukan langkah perantara: mendapatkan `idToken` dari Google terlebih dahulu.
+Satu diagram ini merepresentasikan alur untuk **SEMUA** jenis Social Login (Google, GitHub, X, Apple).
 
 ```mermaid
 sequenceDiagram
     actor User
     participant LP as LoginPage (Flutter)
-    participant OS as Native OS (Google SDK)
+    participant FB_SDK as Firebase Auth SDK
     participant Bloc as AuthBloc
     participant Repo as AuthRepositoryImpl
-    participant Google as Google API Server
     participant BE as Backend (Go)
     participant Store as FlutterSecureStorage
     participant Router as GoRouter
 
-    User->>LP: Tap [G Lanjutkan dengan Google]
-    LP->>Bloc: add(AuthSocialLoginRequested(GoogleOAuthProvider))
-    Bloc->>OS: GoogleSignIn().signIn()
-    Note over OS: Native Google Account Picker muncul
-    Note over LP: LoginPage tetap di stack, kontrol di OS
+    User->>LP: Tap [Lanjutkan dengan Google / GitHub / X]
+    LP->>Bloc: add(AuthSocialLoginRequested(Provider))
+    Bloc->>FB_SDK: Launch Provider UI (Native Popup / Webview)
+    Note over FB_SDK: User login & authorize app
+    
+    FB_SDK-->>Bloc: FirebaseCredential (kembalikan Firebase ID Token)
 
-    User->>OS: Pilih akun Google
-    OS-->>Bloc: GoogleSignInAccount (idToken)
-
-    Bloc->>Repo: loginWithOAuth(idToken, provider: 'google')
-    Repo->>BE: POST /auth/oauth { provider, idToken }
-    BE->>Google: Verifikasi idToken
-    Google-->>BE: { email, name, googleId } valid
+    Bloc->>Repo: loginWithOAuth(firebaseIdToken, provider: 'google/github/x')
+    Repo->>BE: POST /auth/oauth { provider, idToken: firebaseIdToken }
+    Note over BE, BE: Backend TIDAK hit ke API Google/GitHub/X
+    BE->>BE: Verifikasi firebaseIdToken pakai Firebase Admin SDK
+    BE-->>BE: Ekstrak UID, Email, Name. Valid.
 
     alt User belum ada di DB
-        BE->>BE: Buat user baru dari data Google
+        BE->>BE: Buat user baru (Save Firebase UID)
     else User sudah ada
         BE->>BE: Login langsung
     end
@@ -235,108 +225,24 @@ sequenceDiagram
     Bloc->>Bloc: emit(AuthAuthenticated(user))
     Bloc-->>Router: notifyListeners()
     Router-->>LP: Auto-redirect ke /dashboard
-```
-
-### Diagram 4.1 — GitHub Sign-In Flow (OAuth 2.0)
-
-Berbeda dengan Google yang memberikan `idToken` (JWT), GitHub hanya memberikan `accessToken`. Backend Go bertugas mengambil data profil ke server GitHub secara manual.
-
-```mermaid
-sequenceDiagram
-    actor User
-    participant LP as LoginPage (Flutter)
-    participant Web as Webview/CustomTab
-    participant Bloc as AuthBloc
-    participant Repo as AuthRepositoryImpl
-    participant GH as GitHub API Server
-    participant BE as Backend (Go)
-    participant Store as FlutterSecureStorage
-    participant Router as GoRouter
-
-    User->>LP: Tap [Lanjutkan dengan GitHub]
-    LP->>Bloc: add(AuthSocialLoginRequested(GithubOAuthProvider))
-    Bloc->>Web: Launch GitHub OAuth URL
-    Note over Web: Halaman login GitHub muncul
-
-    User->>Web: Authorize App
-    Web-->>Bloc: GitHub Callback (kembalikan accessToken)
-
-    Bloc->>Repo: loginWithOAuth(accessToken, provider: 'github')
-    Repo->>BE: POST /auth/oauth { provider: 'github', idToken: accessToken }
-    BE->>GH: GET api.github.com/user (Authorization: Bearer)
-    GH-->>BE: { email, name, id } valid
-
-    alt User belum ada di DB
-        BE->>BE: Buat user baru dari data GitHub
-    else User sudah ada
-        BE->>BE: Login langsung
-    end
-
-    BE-->>Repo: { accessToken, refreshToken, user }
-    Repo->>Store: saveTokens(accessToken, refreshToken)
-    Repo-->>Bloc: Right(User)
-
-    Bloc->>Bloc: emit(AuthAuthenticated(user))
-    Bloc-->>Router: notifyListeners()
-    Router-->>LP: Auto-redirect ke /dashboard
-```
-
-### Diagram 5 — Perbandingan Alur: Email vs Google
-
-```mermaid
-graph TD
-    A([User buka LoginPage]) --> B{Pilih metode login}
-
-    B -->|Email & Password| C[Isi form email + password]
-    C --> D[add AuthLoginRequested]
-    D --> E[POST /auth/login]
-    E --> F[BE verifikasi password hash]
-
-    B -->|Google Sign-In| G[Tap tombol G]
-    G --> H[Native OS Google Picker]
-    H --> I[Pilih akun Google]
-    I --> J[Dapat idToken dari Google SDK]
-    J --> K[add AuthSocialLoginRequested]
-    K --> L[POST /auth/oauth]
-    L --> M[BE verifikasi idToken ke Google API]
-
-    F --> N[BE return accessToken + refreshToken]
-    M --> N
-
-    N --> O[Simpan token ke SecureStorage]
-    O --> P[emit AuthAuthenticated]
-    P --> Q([GoRouter redirect /dashboard])
 ```
 
 ### Kebutuhan Setup per Platform
 
 #### Flutter Side
-- Tambah package `google_sign_in: ^6.x.x` di `pubspec.yaml`
-- Tambah event `AuthSocialLoginRequested` di `AuthBloc`
-- Buat `GoogleOAuthProvider` di Data Layer
-- Buat `SocialLoginUseCase` di Domain Layer
-- Tambah tombol Google di `LoginPage` (di bawah tombol login biasa)
-
-#### Android
-- Tambah SHA-1 fingerprint di Google Cloud Console
-- Tambah `google-services.json` di `android/app/`
-- Update `build.gradle` dengan Google Services plugin
-
-#### iOS
-- Tambah `REVERSED_CLIENT_ID` ke `Info.plist`
-- Pastikan URL Scheme terdaftar
+- Tambah package `google_sign_in` (khusus untuk *trigger* Native UI Google).
+- Tambah package `firebase_auth`.
+- **TIDAK BUTUH** package spesifik untuk GitHub/X (di-*handle* murni oleh webview bawaan `firebase_auth`).
 
 #### Backend (Go)
-- Endpoint baru: `POST /api/v1/auth/oauth`
-- Tambah library verifikasi Google ID Token
-- Logic upsert user: buat jika belum ada, login jika sudah ada
-- Return format sama dengan login biasa: `{ accessToken, refreshToken, user }`
+- Tambah Firebase Admin SDK.
+- Update skema DB: ganti/tambah kolom `firebase_uid`.
+- Endpoint `POST /api/v1/auth/oauth` hanya bertugas memanggil `VerifyIDToken()` dari Firebase Admin SDK.
 
-#### Google Cloud Console
-- Buat project baru atau gunakan yang existing
-- Enable "Google Sign-In API"
-- Buat OAuth 2.0 Client ID untuk Android dan iOS
-- Daftarkan SHA-1 fingerprint
+#### Firebase Console
+- Enable provider **Google** (masukkan SHA-1 & URL Scheme).
+- Enable provider **GitHub** (masukkan Client ID & Secret dari GitHub Developer).
+- Enable provider **Twitter / X** (masukkan API Key & Secret dari Twitter Developer Portal).
 
 ---
 
