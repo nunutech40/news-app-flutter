@@ -150,17 +150,16 @@ flowchart TD
 
 Aplikasi mendukung dua jenis metode login yang memiliki alur berbeda, namun berakhir di titik yang sama: mendapatkan JWT (accessToken + refreshToken) dari backend.
 
-### Perbandingan Email/Password vs Social Login
+### Perbandingan Metode Login
 
-| Aspek | Email & Password | Social Login (Google, dll) |
-|-------|-----------------|-----------------------------|
-| **Credential asal** | User input langsung di form | Provider eksternal (Google, Apple, GitHub) |
-| **Yang dikirim ke BE** | `{ email, password }` | `{ provider, idToken }` |
-| **Endpoint BE** | `POST /auth/login` | `POST /auth/oauth` |
-| **Verifikasi di BE** | Cek hash password di DB | Verifikasi idToken ke server provider |
-| **UI Popup** | Tidak ada | Native OS picker (bukan halaman Flutter baru) |
-| **Halaman Flutter baru?** | Tidak | Tidak — semua tombol ada di `LoginPage` yang sama |
-| **Status Implementasi** | ✅ Done | 🔄 Planned (Google Sign-In first) |
+| Aspek | Email & Password | Google Sign-In | GitHub Sign-In |
+|-------|-----------------|----------------|----------------|
+| **Credential asal** | User input form | Native OS / Google SDK | Webview / Browser Custom Tabs |
+| **Yang dikirim ke BE**| `{ email, password }` | `{ provider: 'google', idToken: '...' }` | `{ provider: 'github', idToken: '...' }` |
+| **Token Type** | N/A | **JWT (OpenID Connect)** | **Access Token (OAuth 2.0)** |
+| **Verifikasi di BE** | Hash bcrypt | Decode & Verifikasi SDK | Request `GET api.github.com/user` |
+| **Halaman Flutter?** | Ya (`LoginPage`) | Tidak (Native Popup) | Tidak (Webview Popup) |
+| **Status** | ✅ Done | ✅ Done | 🔄 Planned |
 
 ---
 
@@ -176,18 +175,18 @@ Domain Layer:
     └── getIdToken() → Future<String>
 
 Data Layer:
-  GoogleOAuthProvider  implements OAuthProvider
-  GithubOAuthProvider  implements OAuthProvider  (future)
-  AppleOAuthProvider   implements OAuthProvider  (future, App Store required)
+  GoogleOAuthProvider  implements OAuthProvider  (✅ Done)
+  GithubOAuthProvider  implements OAuthProvider  (🔄 Planned)
+  AppleOAuthProvider   implements OAuthProvider  (future)
 
 UseCase:
   SocialLoginUseCase.call(OAuthProvider provider)
-    → provider.getIdToken()
-    → repository.loginWithOAuth(idToken, providerName)
+    → provider.getIdToken() / getAccessToken()
+    → repository.loginWithOAuth(token, providerName)
 
 AuthBloc:
   add(AuthSocialLoginRequested(provider: GoogleOAuthProvider()))
-  add(AuthSocialLoginRequested(provider: GithubOAuthProvider()))   // future
+  add(AuthSocialLoginRequested(provider: GithubOAuthProvider()))
 ```
 
 > [!IMPORTANT]
@@ -225,6 +224,50 @@ sequenceDiagram
 
     alt User belum ada di DB
         BE->>BE: Buat user baru dari data Google
+    else User sudah ada
+        BE->>BE: Login langsung
+    end
+
+    BE-->>Repo: { accessToken, refreshToken, user }
+    Repo->>Store: saveTokens(accessToken, refreshToken)
+    Repo-->>Bloc: Right(User)
+
+    Bloc->>Bloc: emit(AuthAuthenticated(user))
+    Bloc-->>Router: notifyListeners()
+    Router-->>LP: Auto-redirect ke /dashboard
+```
+
+### Diagram 4.1 — GitHub Sign-In Flow (OAuth 2.0)
+
+Berbeda dengan Google yang memberikan `idToken` (JWT), GitHub hanya memberikan `accessToken`. Backend Go bertugas mengambil data profil ke server GitHub secara manual.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant LP as LoginPage (Flutter)
+    participant Web as Webview/CustomTab
+    participant Bloc as AuthBloc
+    participant Repo as AuthRepositoryImpl
+    participant GH as GitHub API Server
+    participant BE as Backend (Go)
+    participant Store as FlutterSecureStorage
+    participant Router as GoRouter
+
+    User->>LP: Tap [Lanjutkan dengan GitHub]
+    LP->>Bloc: add(AuthSocialLoginRequested(GithubOAuthProvider))
+    Bloc->>Web: Launch GitHub OAuth URL
+    Note over Web: Halaman login GitHub muncul
+
+    User->>Web: Authorize App
+    Web-->>Bloc: GitHub Callback (kembalikan accessToken)
+
+    Bloc->>Repo: loginWithOAuth(accessToken, provider: 'github')
+    Repo->>BE: POST /auth/oauth { provider: 'github', idToken: accessToken }
+    BE->>GH: GET api.github.com/user (Authorization: Bearer)
+    GH-->>BE: { email, name, id } valid
+
+    alt User belum ada di DB
+        BE->>BE: Buat user baru dari data GitHub
     else User sudah ada
         BE->>BE: Login langsung
     end
