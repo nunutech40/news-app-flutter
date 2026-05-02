@@ -184,33 +184,80 @@ AuthBloc:
   add(AuthSocialLoginRequested(provider: TwitterOAuthProvider()))
 ```
 
-### Diagram 4 — Unified Firebase Social Login Flow
+### Diagram 4 — Google Sign-In Flow (Native SDK to Firebase)
 
-Satu diagram ini merepresentasikan alur untuk **SEMUA** jenis Social Login (Google, GitHub, X, Apple).
+Khusus untuk Google (dan Apple), Flutter menggunakan SDK Native (`google_sign_in`) untuk memunculkan UI *Account Picker* bawaan OS, barulah token tersebut "ditukar" ke Firebase Auth.
 
 ```mermaid
 sequenceDiagram
     actor User
     participant LP as LoginPage (Flutter)
-    participant FB_SDK as Firebase Auth SDK
+    participant OS as Native OS (Google SDK)
+    participant FB as Firebase Auth
     participant Bloc as AuthBloc
     participant Repo as AuthRepositoryImpl
     participant BE as Backend (Go)
     participant Store as FlutterSecureStorage
     participant Router as GoRouter
 
-    User->>LP: Tap [Lanjutkan dengan Google / GitHub / X]
-    LP->>Bloc: add(AuthSocialLoginRequested(Provider))
-    Bloc->>FB_SDK: Launch Provider UI (Native Popup / Webview)
-    Note over FB_SDK: User login & authorize app
+    User->>LP: Tap [Lanjutkan dengan Google]
+    LP->>Bloc: add(AuthSocialLoginRequested(GoogleOAuthProvider))
+    Bloc->>OS: GoogleSignIn().signIn()
+    Note over OS: Native Google Account Picker muncul
     
-    FB_SDK-->>Bloc: FirebaseCredential (kembalikan Firebase ID Token)
+    User->>OS: Pilih akun Google
+    OS-->>Bloc: GoogleSignInAccount (idToken Google mentah)
+    
+    Note over Bloc, FB: Tukar token Google mentah ke Firebase
+    Bloc->>FB: signInWithCredential(idToken)
+    FB-->>Bloc: FirebaseCredential (berisi Firebase ID Token universal)
 
-    Bloc->>Repo: loginWithOAuth(firebaseIdToken, provider: 'google/github/x')
-    Repo->>BE: POST /auth/oauth { provider, idToken: firebaseIdToken }
-    Note over BE, BE: Backend TIDAK hit ke API Google/GitHub/X
+    Bloc->>Repo: loginWithOAuth(firebaseIdToken, provider: 'google')
+    Repo->>BE: POST /auth/oauth { provider: 'google', idToken: firebaseIdToken }
+    Note over BE, BE: Backend HANYA mengecek Firebase ID Token
     BE->>BE: Verifikasi firebaseIdToken pakai Firebase Admin SDK
-    BE-->>BE: Ekstrak UID, Email, Name. Valid.
+
+    alt User belum ada di DB
+        BE->>BE: Buat user baru (Save Firebase UID)
+    else User sudah ada
+        BE->>BE: Login langsung
+    end
+
+    BE-->>Repo: { accessToken, refreshToken, user }
+    Repo->>Store: saveTokens(accessToken, refreshToken)
+    Repo-->>Bloc: Right(User)
+
+    Bloc->>Bloc: emit(AuthAuthenticated(user))
+    Bloc-->>Router: notifyListeners()
+    Router-->>LP: Auto-redirect ke /dashboard
+```
+
+### Diagram 4.1 — GitHub & X Sign-In Flow (Firebase Webview)
+
+Untuk GitHub dan X (Twitter), tidak ada Native SDK. Flutter langsung menyerahkan tugas memunculkan Webview OAuth murni kepada Firebase.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant LP as LoginPage (Flutter)
+    participant FB_Web as Firebase Webview
+    participant Bloc as AuthBloc
+    participant Repo as AuthRepositoryImpl
+    participant BE as Backend (Go)
+    participant Store as FlutterSecureStorage
+    participant Router as GoRouter
+
+    User->>LP: Tap [Lanjutkan dengan GitHub / X]
+    LP->>Bloc: add(AuthSocialLoginRequested(Provider))
+    Bloc->>FB_Web: signInWithProvider(Github/TwitterProvider)
+    Note over FB_Web: Halaman Webview Login muncul
+    
+    User->>FB_Web: Authorize App
+    FB_Web-->>Bloc: FirebaseCredential (kembalikan Firebase ID Token universal)
+
+    Bloc->>Repo: loginWithOAuth(firebaseIdToken, provider: 'github/x')
+    Repo->>BE: POST /auth/oauth { provider, idToken: firebaseIdToken }
+    BE->>BE: Verifikasi firebaseIdToken pakai Firebase Admin SDK
 
     alt User belum ada di DB
         BE->>BE: Buat user baru (Save Firebase UID)
