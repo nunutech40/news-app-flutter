@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -28,15 +25,9 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -65,4 +56,34 @@ class DefaultFirebaseOptions {
     storageBucket: 'free-api-news.firebasestorage.app',
     iosBundleId: 'com.nunu.newsApp',
   );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyD5tdb3Hh5cuFhlQdsis1j0K9Lslwt3mJM',
+    appId: '1:578159207410:web:a055bf43afaf1e8a9bc16b',
+    messagingSenderId: '578159207410',
+    projectId: 'free-api-news',
+    authDomain: 'free-api-news.firebaseapp.com',
+    storageBucket: 'free-api-news.firebasestorage.app',
+    measurementId: 'G-2G5NKF429X',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyDS5hwQf4TeHEI1Sk0lfV0jkMeA4blSro4',
+    appId: '1:578159207410:ios:2f9ff57572058ea39bc16b',
+    messagingSenderId: '578159207410',
+    projectId: 'free-api-news',
+    storageBucket: 'free-api-news.firebasestorage.app',
+    iosBundleId: 'com.nunu.newsApp',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyD5tdb3Hh5cuFhlQdsis1j0K9Lslwt3mJM',
+    appId: '1:578159207410:web:dc5e216391aad9c79bc16b',
+    messagingSenderId: '578159207410',
+    projectId: 'free-api-news',
+    authDomain: 'free-api-news.firebaseapp.com',
+    storageBucket: 'free-api-news.firebasestorage.app',
+    measurementId: 'G-51YWEYE07T',
+  );
+
 }

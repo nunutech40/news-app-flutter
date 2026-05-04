@@ -23,7 +23,11 @@ class GoogleOAuthService implements OAuthService {
   Future<String> signIn() async {
     try {
       await _ensureInitialized();
-      final GoogleSignInAccount account = await GoogleSignIn.instance.authenticate();
+      final GoogleSignInAccount? account = await GoogleSignIn.instance.authenticate();
+      
+      if (account == null) {
+        throw Exception('User canceled Google Sign In');
+      }
 
       final GoogleSignInAuthentication auth = await account.authentication;
 

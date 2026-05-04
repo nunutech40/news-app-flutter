@@ -14,7 +14,8 @@ class ApiConstants {
   static const String health = '/health';
 
   // OAuth Clients
-  static const String googleWebClientId = '916008211568-jr1dp3gbnvfc4nnal0toptbvepr3e3ma.apps.googleusercontent.com';
+  static const String googleWebClientId =
+      '578159207410-5cvquhv5kekhr3bb5ueonv2hlqnl36hb.apps.googleusercontent.com';
 
   // News endpoints
   static const String newsCategories = '/api/v1/news/categories';

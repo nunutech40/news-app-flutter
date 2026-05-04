@@ -216,7 +216,6 @@ class _IconBtn extends StatelessWidget {
   }
 }
 
-// ── Category Chips ────────────────────────────────────────────────────────────
 class _CategoryChips extends StatelessWidget {
   final List<Category> categories;
   final String selectedSlug;
@@ -236,35 +235,48 @@ class _CategoryChips extends StatelessWidget {
     ];
 
     return SizedBox(
-      height: 48,
+      height: 38, // Ukuran lebih compact
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         scrollDirection: Axis.horizontal,
         itemCount: all.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (context, i) {
           final cat = all[i];
           final isSelected = cat.slug == selectedSlug;
           return GestureDetector(
             onTap: () => onSelected(cat.slug),
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOutCirc,
+              alignment: Alignment.center, // Memastikan text selalu pas di tengah
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               decoration: BoxDecoration(
-                color: isSelected ? AppTheme.primaryColor : AppTheme.surfaceCard,
-                borderRadius: BorderRadius.circular(20),
+                color: isSelected ? AppTheme.primaryColor : Colors.transparent,
+                borderRadius: BorderRadius.circular(100), // Rounded pill sempurna
                 border: Border.all(
                   color: isSelected
                       ? AppTheme.primaryColor
-                      : AppTheme.textMuted.withOpacity(0.2),
+                      : AppTheme.textMuted.withOpacity(0.3),
+                  width: 1,
                 ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withOpacity(0.4),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        )
+                      ]
+                    : [],
               ),
               child: Text(
                 cat.name,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : AppTheme.textSecondary,
-                  fontSize: 13,
+                  color: isSelected ? Colors.white : AppTheme.textMuted,
+                  fontSize: 14,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  letterSpacing: 0.3,
                 ),
               ),
             ),
@@ -689,21 +701,20 @@ class _CategoryShimmer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 48,
+      height: 38,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         scrollDirection: Axis.horizontal,
         itemCount: 5,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (_, __) => Shimmer.fromColors(
           baseColor: AppTheme.surfaceCard,
           highlightColor: AppTheme.surfaceElevated,
           child: Container(
             width: 80,
-            height: 36,
             decoration: BoxDecoration(
               color: AppTheme.surfaceCard,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(100),
             ),
           ),
         ),
