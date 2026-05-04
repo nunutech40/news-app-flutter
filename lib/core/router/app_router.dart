@@ -43,9 +43,13 @@ class AppRouter {
     // Ini menggaransi user tidak akan bisa masuk halaman terlarang.
     redirect: (context, state) {
       final authStatus = authBloc.state.status;
+      final isFirebaseLink = state.uri.toString().contains('firebaseauth');
+      
       final isOnAuth = state.matchedLocation == '/login' ||
           state.matchedLocation == '/register' ||
-          state.matchedLocation.startsWith('/forgot-password');
+          state.matchedLocation.startsWith('/forgot-password') ||
+          isFirebaseLink;
+          
       final isOnSplash = state.matchedLocation == '/splash';
 
       // 1. Sedang inisialisasi aplikasi (cek token di lokal), tahan user di Splash
@@ -53,7 +57,14 @@ class AppRouter {
         return null; // Tetap di rute saat ini (/splash)
       }
 
-      // 2. Tidak punya akses (Unauthenticated) & mencoba akses halaman non-Auth
+      // 2. Intercept Firebase Deep Link agar tidak crash ke Page Not Found
+      // Jika Firebase melempar deep link dan status masih loading/unauthenticated,
+      // tahan user di halaman Login (di mana loading spinner sedang berputar)
+      if (isFirebaseLink && authStatus != AuthStatus.authenticated) {
+        return '/login';
+      }
+
+      // 3. Tidak punya akses (Unauthenticated) & mencoba akses halaman non-Auth
       //    > Paksa lempar ke Login Page
       if (authStatus == AuthStatus.unauthenticated && !isOnAuth) {
         return '/login';

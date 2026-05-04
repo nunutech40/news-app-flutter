@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:news_app/core/theme/app_theme.dart';
 import 'package:news_app/features/auth/data/services/google_oauth_service.dart';
+import 'package:news_app/features/auth/data/services/github_oauth_service.dart';
+import 'package:news_app/features/auth/data/services/twitter_oauth_service.dart';
 import 'package:news_app/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:news_app/features/auth/presentation/widgets/auth_text_field.dart';
 import 'package:news_app/core/utils/validators.dart';
@@ -240,23 +242,45 @@ class _LoginPageState extends State<LoginPage>
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   _SocialButton(
-                                    iconPath:
-                                        'assets/images/google_icon.png', // Fallback to an icon if you want, or use a Widget
+                                    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png',
                                     onPressed: isLoading
                                         ? null
                                         : () {
                                             context.read<AuthBloc>().add(
                                                   AuthOAuthLoginRequested(
                                                     GoogleOAuthService(
-                                                      serverClientId:
-                                                          ApiConstants
-                                                              .googleWebClientId,
+                                                      serverClientId: ApiConstants.googleWebClientId,
                                                     ),
                                                   ),
                                                 );
                                           },
                                   ),
-                                  // Apple button bisa ditambah di sini
+                                  const SizedBox(width: 16),
+                                  _SocialButton(
+                                    imageUrl: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
+                                    onPressed: isLoading
+                                        ? null
+                                        : () {
+                                            context.read<AuthBloc>().add(
+                                                  AuthOAuthLoginRequested(
+                                                    GithubOAuthService(),
+                                                  ),
+                                                );
+                                          },
+                                  ),
+                                  const SizedBox(width: 16),
+                                  _SocialButton(
+                                    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/X_logo_2023.svg/120px-X_logo_2023.svg.png',
+                                    onPressed: isLoading
+                                        ? null
+                                        : () {
+                                            context.read<AuthBloc>().add(
+                                                  AuthOAuthLoginRequested(
+                                                    TwitterOAuthService(),
+                                                  ),
+                                                );
+                                          },
+                                  ),
                                 ],
                               );
                             },
@@ -364,11 +388,11 @@ class _GradientButton extends StatelessWidget {
 }
 
 class _SocialButton extends StatelessWidget {
-  final String iconPath;
+  final String imageUrl;
   final VoidCallback? onPressed;
 
   const _SocialButton({
-    required this.iconPath,
+    required this.imageUrl,
     this.onPressed,
   });
 
@@ -392,10 +416,10 @@ class _SocialButton extends StatelessWidget {
           ),
           child: Center(
             child: Image.network(
-              // Menggunakan network image sementara
-              'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/120px-Google_%22G%22_logo.svg.png',
+              imageUrl,
               width: 28,
               height: 28,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.error_outline),
             ),
           ),
         ),
